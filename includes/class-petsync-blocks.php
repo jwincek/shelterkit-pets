@@ -486,7 +486,7 @@ class Petsync_Blocks {
 
 		wp_localize_script(
 			self::NAMESPACE . '-binding-helper',
-			'petstablishedEditor',
+			'petsyncEditor',
 			array(
 				'bindingKeys' => $this->get_binding_keys(),
 			)

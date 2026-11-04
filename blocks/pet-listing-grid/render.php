@@ -32,7 +32,7 @@ if ( isset( $_GET['compare'] ) && ! empty( $_GET['compare'] ) ) {
 
 // Ensure the grid store is enqueued so the interactivity-router
 // appears in the import map for dynamic imports.
-wp_enqueue_script_module( 'petstablished-grid' );
+wp_enqueue_script_module( 'petsync-grid' );
 
 // === Block Attributes ===
 $columns               = $attributes['columns'] ?? 3;

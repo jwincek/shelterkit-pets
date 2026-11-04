@@ -44,7 +44,7 @@ $fav_count    = count( $favorites );
 // Enqueue the modal script module so the Interactivity API hydration
 // waits for it. This ensures store() runs BEFORE directives evaluate,
 // replacing the server-provided static state with reactive getters.
-wp_enqueue_script_module( 'petstablished-favorites-modal' );
+wp_enqueue_script_module( 'petsync-favorites-modal' );
 
 // Hydrate favorited pets for initial server render.
 $favorite_pets = array();

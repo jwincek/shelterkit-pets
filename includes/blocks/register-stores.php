@@ -91,7 +91,7 @@ function register_stores(): void {
 function register_script_modules(): void {
 	// Utils module (shared dependency).
 	wp_register_script_module(
-		'petstablished-utils',
+		'petsync-utils',
 		PETSYNC_URL . 'assets/js/utils.js',
 		[ '@wordpress/interactivity' ],
 		PETSYNC_VERSION
@@ -99,21 +99,21 @@ function register_script_modules(): void {
 
 	// Global store module.
 	wp_register_script_module(
-		'petstablished-store',
+		'petsync-store',
 		PETSYNC_URL . 'assets/js/store.js',
-		[ '@wordpress/interactivity', 'petstablished-utils' ],
+		[ '@wordpress/interactivity', 'petsync-utils' ],
 		PETSYNC_VERSION
 	);
-	wp_enqueue_script_module( 'petstablished-store' );
+	wp_enqueue_script_module( 'petsync-store' );
 
 	// Grid store — interactivity-router is a dynamic dependency.
 	wp_register_script_module(
-		'petstablished-grid',
+		'petsync-grid',
 		PETSYNC_URL . 'assets/js/interactivity/grid.js',
 		[
 			'@wordpress/interactivity',
-			'petstablished-store',
-			'petstablished-utils',
+			'petsync-store',
+			'petsync-utils',
 			[
 				'id'     => '@wordpress/interactivity-router',
 				'import' => 'dynamic',
@@ -124,12 +124,12 @@ function register_script_modules(): void {
 
 	// Compare bar store — uses the router dynamically for viewComparison.
 	wp_register_script_module(
-		'petstablished-compare-bar',
+		'petsync-compare-bar',
 		PETSYNC_URL . 'assets/js/interactivity/compare-bar.js',
 		[
 			'@wordpress/interactivity',
-			'petstablished-store',
-			'petstablished-utils',
+			'petsync-store',
+			'petsync-utils',
 			[
 				'id'     => '@wordpress/interactivity-router',
 				'import' => 'dynamic',
@@ -140,12 +140,12 @@ function register_script_modules(): void {
 
 	// Favorites modal store — standalone, no router dependency.
 	wp_register_script_module(
-		'petstablished-favorites-modal',
+		'petsync-favorites-modal',
 		PETSYNC_URL . 'assets/js/interactivity/favorites-modal.js',
 		[
 			'@wordpress/interactivity',
-			'petstablished-store',
-			'petstablished-utils',
+			'petsync-store',
+			'petsync-utils',
 		],
 		PETSYNC_VERSION
 	);
@@ -164,11 +164,11 @@ function register_script_modules(): void {
 	 * script modules to load dynamically.
 	 */
 	if ( method_exists( wp_interactivity(), 'add_client_navigation_support_to_script_module' ) ) {
-		wp_interactivity()->add_client_navigation_support_to_script_module( 'petstablished-store' );
-		wp_interactivity()->add_client_navigation_support_to_script_module( 'petstablished-grid' );
-		wp_interactivity()->add_client_navigation_support_to_script_module( 'petstablished-compare-bar' );
-		wp_interactivity()->add_client_navigation_support_to_script_module( 'petstablished-favorites-modal' );
-		wp_interactivity()->add_client_navigation_support_to_script_module( 'petstablished-utils' );
+		wp_interactivity()->add_client_navigation_support_to_script_module( 'petsync-store' );
+		wp_interactivity()->add_client_navigation_support_to_script_module( 'petsync-grid' );
+		wp_interactivity()->add_client_navigation_support_to_script_module( 'petsync-compare-bar' );
+		wp_interactivity()->add_client_navigation_support_to_script_module( 'petsync-favorites-modal' );
+		wp_interactivity()->add_client_navigation_support_to_script_module( 'petsync-utils' );
 	}
 }
 

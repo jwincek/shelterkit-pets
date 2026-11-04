@@ -569,14 +569,14 @@ class Petsync_Variations {
 		);
 
 		wp_enqueue_script(
-			'petstablished-variations',
+			'petsync-variations',
 			PETSYNC_URL . 'assets/js/variations.js',
 			array( 'wp-blocks', 'wp-dom-ready', 'wp-element', 'wp-i18n' ),
 			PETSYNC_VERSION,
 			true
 		);
 
-		wp_localize_script( 'petstablished-variations', 'petstablishedVariations', $variations_data );
+		wp_localize_script( 'petsync-variations', 'petsyncVariations', $variations_data );
 	}
 
 	/**
