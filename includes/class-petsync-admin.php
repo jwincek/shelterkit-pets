@@ -225,7 +225,7 @@ class Petsync_Admin {
 			esc_attr( self::OPTION_NAME ),
 			checked( $settings['delete_data_on_uninstall'], true, false ),
 			esc_html__( 'Delete all data when this plugin is deleted', 'shelterkit-pets' ),
-			esc_html__( 'Removes imported pets, pet taxonomies, template customizations, settings, and visitors’ saved favorites and comparison lists. Leave off to keep everything in place for a reinstall. Pets can be re-imported from Petstablished at any time.', 'shelterkit-pets' )
+			esc_html__( 'Removes every pet — including pets entered by hand or from a spreadsheet — along with pet taxonomies, template customizations, settings, and visitors’ saved favorites and comparison lists. Pet photos stay in the Media Library. Leave off to keep everything in place for a reinstall. Only pets synced from Petstablished can be fetched again.', 'shelterkit-pets' )
 		);
 	}
 

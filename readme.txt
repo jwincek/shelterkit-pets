@@ -124,7 +124,9 @@ No. The blocks use the WordPress Interactivity API and ship as ready-to-run sour
 
 = What happens to my data if I delete the plugin? =
 
-By default, deleting the plugin keeps your data — imported pets, settings, and template customizations all stay in place, so you can delete and reinstall without losing anything. Only temporary state (the sync schedule and caches) is cleaned up. To remove everything on deletion instead, enable **Delete all data when this plugin is deleted** under Pets → Sync Settings first. Imported pets can always be re-fetched with one Sync Now; pets you entered by hand exist only in WordPress, so keep the default unless you mean it.
+By default, deleting the plugin keeps your data — imported pets, settings, and template customizations all stay in place, so you can delete and reinstall without losing anything. Only temporary state (the sync schedule and caches) is cleaned up. To remove the plugin's data on deletion instead, enable **Delete all data when this plugin is deleted** under Pets → Sync Settings first. That deletes every pet however it was added, the pet categories, your kennel card design changes, the plugin's settings, and visitors' saved favorites and comparisons. Imported pets can always be re-fetched with one Sync Now; pets you entered by hand or from a spreadsheet exist only in WordPress, so keep the default unless you mean it.
+
+Pet photos are kept either way. They are ordinary Media Library items and may be in use elsewhere on your site, so delete any you no longer want from **Media → Library**, where they show as unattached.
 
 == Screenshots ==
 

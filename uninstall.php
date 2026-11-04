@@ -12,18 +12,22 @@
  * Removed only when "Delete all data when this plugin is deleted" is
  * enabled in Pets → Sync Settings (default off, so delete + reinstall
  * loses nothing):
- *  - all `vcps_pet` posts (and their post meta / term relationships)
+ *  - all `vcps_pet` posts, however they were added (and their post meta /
+ *    term relationships)
  *  - all terms in the plugin's `pet_*` taxonomies
  *  - Site Editor customizations of plugin templates and template parts
  *    (wp_template / wp_template_part posts filed under this plugin's
  *    wp_theme term), plus that term itself
- *  - settings and sync-state options
+ *  - settings, sync-state and editor-preview options
  *  - per-user favorites/comparison meta
  *
- * Pets are synced from the Petstablished API, so the destructive tier
- * is recoverable by reinstalling and running Sync Now — except Site
- * Editor template customizations and users' saved lists, which is why
- * it is opt-in.
+ * Kept even then: pet photos. They are ordinary Media Library attachments,
+ * and a photo may be in use on a page or post that has nothing to do with
+ * this plugin. Deleting a pet leaves its photos unattached, not deleted.
+ *
+ * Imported pets come back with one Sync Now after a reinstall; pets entered
+ * by hand or from a spreadsheet, Site Editor customizations and users'
+ * saved lists do not, which is why the destructive tier is opt-in.
  *
  * @package ShelterKit_Pets
  */
@@ -36,16 +40,20 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
  * Clean up the current site. Returns whether the destructive tier ran,
  * so the caller can decide about the (network-wide) user meta.
  */
-function vcps_uninstall_site(): bool {
+function petsync_uninstall_site(): bool {
 	global $wpdb;
 
 	// --- Ephemeral tier: always removed --------------------------------
 	wp_clear_scheduled_hook( 'petsync_scheduled_sync' );
 	wp_clear_scheduled_hook( 'petstablished_scheduled_sync' ); // legacy pre-1.0 hook name
 
+	// Every transient the plugin sets, by name. The SQL sweep below cannot see
+	// a site with a persistent object cache, where transients never reach the
+	// options table; only the API reaches them there.
 	delete_transient( 'petsync_sync_in_progress' );
 	delete_transient( 'petsync_sync_incomplete' );
 	delete_transient( 'petsync_sync_pets' );
+	delete_transient( 'petsync_sync_session' );
 
 	// Suffixed transients (e.g. paged sync snapshots) — no wildcard API.
 	$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -170,6 +178,7 @@ function vcps_uninstall_site(): bool {
 	delete_option( 'petsync_last_sync' );
 	delete_option( 'petsync_last_sync_stats' );
 	delete_option( 'petsync_sync_log' );
+	delete_option( 'petsync_preview_pet_id' );
 	// Schema version — dropped only on the full-delete path, so that the
 	// preserve-by-default path keeps its stored data correctly versioned for
 	// a later reinstall.
@@ -192,27 +201,37 @@ function vcps_uninstall_site(): bool {
 	return true;
 }
 
-$vcps_delete_user_meta = false;
+/**
+ * Clean up every site, then the network-wide user meta.
+ *
+ * A function rather than file-scope code so nothing here is a global, and so
+ * a test can run the whole uninstall more than once in one process.
+ */
+function petsync_uninstall(): void {
+	$delete_user_meta = false;
 
-if ( is_multisite() ) {
-	$vcps_site_ids = get_sites(
-		array(
-			'fields' => 'ids',
-			'number' => 0,
-		)
-	);
-	foreach ( $vcps_site_ids as $vcps_site_id ) {
-		switch_to_blog( (int) $vcps_site_id );
-		$vcps_delete_user_meta = vcps_uninstall_site() || $vcps_delete_user_meta;
-		restore_current_blog();
+	if ( is_multisite() ) {
+		$site_ids = get_sites(
+			array(
+				'fields' => 'ids',
+				'number' => 0,
+			)
+		);
+		foreach ( $site_ids as $site_id ) {
+			switch_to_blog( (int) $site_id );
+			$delete_user_meta = petsync_uninstall_site() || $delete_user_meta;
+			restore_current_blog();
+		}
+	} else {
+		$delete_user_meta = petsync_uninstall_site();
 	}
-} else {
-	$vcps_delete_user_meta = vcps_uninstall_site();
+
+	// User meta is network-wide (shared usermeta table) — delete once, and
+	// only if at least one site opted into data removal.
+	if ( $delete_user_meta ) {
+		delete_metadata( 'user', 0, '_pet_favorites', '', true );
+		delete_metadata( 'user', 0, '_pet_comparison', '', true );
+	}
 }
 
-// User meta is network-wide (shared usermeta table) — delete once, and
-// only if at least one site opted into data removal.
-if ( $vcps_delete_user_meta ) {
-	delete_metadata( 'user', 0, '_pet_favorites', '', true );
-	delete_metadata( 'user', 0, '_pet_comparison', '', true );
-}
+petsync_uninstall();
