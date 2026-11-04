@@ -38,11 +38,15 @@ Petstablished is the supported platform today; support for additional shelter-ma
 
 This plugin is not affiliated with, endorsed by, or sponsored by Petstablished, Adopt-a-Pet, RescueGroups.org, Shelterluv or Petfinder. Those names are trademarks of their respective owners and are used here only to describe compatibility.
 
-Only Petstablished is contacted. The plugin ships field mappings describing how other platforms name their data, so that support for them can be added later, but nothing in this release sends a request to any of them.
+Of the shelter platforms named above, only Petstablished is ever contacted. The plugin ships field mappings describing how other platforms name their data, so that support for them can be added later, but nothing in this release sends a request to any of them.
 
 == External services ==
 
-This plugin can connect to the Petstablished public API to import your shelter's adoptable pet listings. The connection is **optional** — it is used only if you enter a Petstablished API key. Without one, no external requests are made at all and pets are entered by hand.
+This plugin uses up to three external services, described below. Without a Petstablished API key, your site's server makes no external requests at all, and the only thing a visitor's browser loads from elsewhere is a YouTube video you have added to a pet.
+
+= Petstablished =
+
+The plugin can connect to the Petstablished public API to import your shelter's adoptable pet listings. The connection is **optional** — it is used only if you enter a Petstablished API key.
 
 * **What it does:** retrieves your organization's pet records (name, photos, breed, age, description, and adoption status).
 * **What is sent and when:** your Petstablished public API key and pagination parameters are sent to `https://petstablished.com/api/v2/public/pets`. Requests are made only when you click **Sync Now** in the admin, or on the schedule you configure for the automatic sync (WP-Cron). No visitor data and no personal data from your site are ever sent.
@@ -52,6 +56,24 @@ Review Petstablished's terms and privacy policy before use:
 
 * Terms of Service: https://petstablished.com/tos
 * Privacy Policy: https://petstablished.com/privacy
+
+= Pet photos from Petstablished (Amazon Web Services) =
+
+Petstablished keeps pet photos on Amazon Web Services (currently `s3.us-east-1.amazonaws.com`), and the plugin uses them in two ways. Pets added by hand use only photos from your own Media Library and are not affected.
+
+* **During a sync:** your server copies each imported pet's main photo into your Media Library, so cards and listings are served from your own site. Nothing from your site is sent with the request, and a photo that has not changed is not downloaded again.
+* **On a pet's page:** the Pet Gallery block shows an imported pet's other photos directly from Petstablished's storage, so the visitor's browser loads them from Amazon Web Services, which receives the visitor's IP address and browser details.
+* **Where it goes:** Amazon Web Services, hosting the photos on Petstablished's behalf. The photos themselves are covered by Petstablished's terms above.
+* AWS Privacy Notice: https://aws.amazon.com/privacy/
+
+= YouTube =
+
+When a pet has a YouTube video — imported from Petstablished, or added by hand in the editor — the Pet Gallery block shows it in an embedded player from `youtube-nocookie.com`, YouTube's privacy-enhanced mode.
+
+* **What is sent and when:** the visitor's browser loads the player from YouTube as the video scrolls into view, which gives YouTube the visitor's IP address and browser details. Pages for pets without a video load nothing from YouTube.
+* **Where it goes:** YouTube (Google).
+* YouTube Terms of Service: https://www.youtube.com/t/terms
+* Google Privacy Policy: https://policies.google.com/privacy
 
 == Installation ==
 
