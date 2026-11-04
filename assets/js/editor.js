@@ -40,7 +40,7 @@
 	function BindingKeysList() {
 		const [ search, setSearch ] = useState( '' );
 		const [ copied, setCopied ] = useState( null );
-		const keys = window.petstablishedEditor?.bindingKeys || [];
+		const keys = window.petsyncEditor?.bindingKeys || [];
 
 		const filtered = keys.filter(
 			( k ) =>

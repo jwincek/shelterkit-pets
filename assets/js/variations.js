@@ -14,11 +14,11 @@
 	const { registerBlockVariation } = wp.blocks;
 
 	wp.domReady( function () {
-		if ( ! window.petstablishedVariations ) {
+		if ( ! window.petsyncVariations ) {
 			return;
 		}
 
-		const { simple, groups } = window.petstablishedVariations;
+		const { simple, groups } = window.petsyncVariations;
 
 		// Register simple variations (single blocks with bindings).
 		if ( simple && Array.isArray( simple ) ) {
@@ -214,7 +214,7 @@
 			adoption_title: 'Adopt Buddy',
 			url: '#',
 			adoption_form_url: '#',
-			image: window.petstablishedVariations?.placeholderImage || '',
+			image: window.petsyncVariations?.placeholderImage || '',
 			// Boolean fields
 			shots_current: 'Yes',
 			spayed_neutered: 'Yes',

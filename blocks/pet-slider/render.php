@@ -208,26 +208,43 @@ if ( $similar_pets_mode ) {
 // Generate unique ID for this slider instance.
 $slider_id = 'pet-slider-' . wp_unique_id();
 
-// Build scoped CSS for custom styling — set custom properties on the root.
-$scoped_styles   = array();
-$scoped_styles[] = "#{$slider_id} { --slider-gap: " . absint( $card_gap ) . 'px; --slider-card-radius: ' . absint( $card_border_radius ) . 'px; }';
+// Custom styling travels as custom properties on the wrapper's style attribute
+// rather than in a <style> element. An inline style outranks the ID selector
+// the element used, so these still beat the stylesheet's per-breakpoint gaps.
+$slider_vars = array(
+	'--slider-gap'         => absint( $card_gap ) . 'px',
+	'--slider-card-radius' => absint( $card_border_radius ) . 'px',
+);
 
-if ( ! empty( $name_font_size ) ) {
-	$scoped_styles[] = "#{$slider_id} .pet-slider__name { font-size: " . esc_attr( $name_font_size ) . ' !important; }';
+// A typography override applies only when set, so each one also adds a class
+// for style.css to key on. Without it the override could not outrank the
+// layouts and breakpoints that set these sizes directly, as the old !important
+// rule did.
+$font_overrides = array(
+	'name-font-size'   => $name_font_size,
+	'name-font-family' => $name_font_family,
+	'meta-font-size'   => $meta_font_size,
+	'meta-font-family' => $meta_font_family,
+);
+foreach ( $font_overrides as $override => $value ) {
+	if ( ! empty( $value ) ) {
+		$slider_vars[ '--slider-' . $override ] = (string) $value;
+		$wrapper_classes[]                      = 'pet-slider--has-' . $override;
+	}
 }
-if ( ! empty( $name_font_family ) ) {
-	$scoped_styles[] = "#{$slider_id} .pet-slider__name { font-family: " . esc_attr( $name_font_family ) . ' !important; }';
-}
-if ( ! empty( $meta_font_size ) ) {
-	$scoped_styles[] = "#{$slider_id} .pet-slider__meta { font-size: " . esc_attr( $meta_font_size ) . ' !important; }';
-}
-if ( ! empty( $meta_font_family ) ) {
-	$scoped_styles[] = "#{$slider_id} .pet-slider__meta { font-family: " . esc_attr( $meta_font_family ) . ' !important; }';
+
+$slider_style = '';
+foreach ( $slider_vars as $property => $value ) {
+	$slider_style .= $property . ':' . $value . ';';
 }
 
 $extra_attrs = array(
 	'id'                    => $slider_id,
 	'class'                 => implode( ' ', $wrapper_classes ),
+	// Filtered here as well as in core: 6.9, the floor this plugin supports,
+	// does not filter this merge. It also joins it to any block-supports style
+	// with a bare space, so the trailing semicolon keeps the last value whole.
+	'style'                 => safecss_filter_attr( $slider_style ) . ';',
 	'data-wp-interactive'   => 'petsync/slider',
 	'data-wp-context'       => wp_json_encode( $context ),
 	'data-wp-init'          => $use_cards_layout ? '' : 'callbacks.init',
@@ -248,7 +265,6 @@ $archive_url = get_post_type_archive_link( 'vcps_pet' );
 ?>
 
 <div <?php echo $wrapper_attributes; /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes() returns escaped HTML. */ ?>>
-	<style><?php echo implode( ' ', $scoped_styles ); /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSS values pre-escaped with absint()/esc_attr(). */ ?></style>
 
 	<?php if ( $use_cards_layout ) : ?>
 		<!-- CARDS MODE: Static cards for 1-3 similar pets -->

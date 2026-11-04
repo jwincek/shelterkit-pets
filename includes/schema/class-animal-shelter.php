@@ -260,9 +260,9 @@ class Animal_Shelter {
 			return;
 		}
 
-		printf(
-			'<script type="application/ld+json">%s</script>' . "\n",
-			wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_UNESCAPED_UNICODE )
+		wp_print_inline_script_tag(
+			(string) wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_UNESCAPED_UNICODE ),
+			array( 'type' => 'application/ld+json' )
 		);
 	}
 }

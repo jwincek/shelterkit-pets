@@ -225,7 +225,7 @@ class Petsync_Admin {
 			esc_attr( self::OPTION_NAME ),
 			checked( $settings['delete_data_on_uninstall'], true, false ),
 			esc_html__( 'Delete all data when this plugin is deleted', 'shelterkit-pets' ),
-			esc_html__( 'Removes imported pets, pet taxonomies, template customizations, settings, and visitors’ saved favorites and comparison lists. Leave off to keep everything in place for a reinstall. Pets can be re-imported from Petstablished at any time.', 'shelterkit-pets' )
+			esc_html__( 'Removes every pet — including pets entered by hand or from a spreadsheet — along with pet taxonomies, template customizations, settings, and visitors’ saved favorites and comparison lists. Pet photos stay in the Media Library. Leave off to keep everything in place for a reinstall. Only pets synced from Petstablished can be fetched again.', 'shelterkit-pets' )
 		);
 	}
 
@@ -338,127 +338,6 @@ class Petsync_Admin {
 				?>
 			</form>
 		</div>
-
-		<script>
-		(function() {
-			const syncButton = document.getElementById('sync-button');
-			const progressDiv = document.getElementById('sync-progress');
-			const progressBar = document.getElementById('sync-progress-bar');
-			const progressText = document.getElementById('sync-progress-text');
-			const resultsDiv = document.getElementById('sync-results');
-			const statusDiv = document.getElementById('sync-status');
-
-			let totalPets = 0;
-			let processed = 0;
-			let batchSize = <?php echo (int) $settings['batch_size']; ?>;
-			let stats = { created: 0, updated: 0, unchanged: 0 };
-
-			syncButton.addEventListener('click', startSync);
-
-			async function startSync() {
-				syncButton.disabled = true;
-				syncButton.textContent = '<?php esc_html_e( 'Starting...', 'shelterkit-pets' ); ?>';
-				progressDiv.style.display = 'block';
-				resultsDiv.style.display = 'none';
-				progressBar.style.width = '0%';
-				progressText.textContent = '<?php esc_html_e( 'Fetching pets from Petstablished...', 'shelterkit-pets' ); ?>';
-
-				try {
-					const startRes = await fetch(ajaxurl, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-						body: new URLSearchParams({
-							action: 'petsync_start_sync',
-							nonce: '<?php echo esc_js( wp_create_nonce( 'petsync_sync' ) ); ?>'
-						})
-					});
-					const startData = await startRes.json();
-
-					if (!startData.success) {
-						throw new Error(startData.data || 'Failed to start sync');
-					}
-
-					totalPets = startData.data.total;
-					batchSize = startData.data.batchSize;
-					processed = 0;
-					stats = { created: 0, updated: 0, unchanged: 0 };
-
-					progressText.textContent = `<?php esc_html_e( 'Found', 'shelterkit-pets' ); ?> ${totalPets} <?php esc_html_e( 'pets. Processing...', 'shelterkit-pets' ); ?>`;
-
-					// Process in batches
-					while (processed < totalPets) {
-						await processBatch();
-					}
-
-					// Finish sync
-					await finishSync();
-
-				} catch (error) {
-					progressText.textContent = '<?php esc_html_e( 'Error:', 'shelterkit-pets' ); ?> ' + error.message;
-					progressText.style.color = '#d63638';
-				}
-
-				syncButton.disabled = false;
-				syncButton.textContent = '<?php esc_html_e( 'Sync Now', 'shelterkit-pets' ); ?>';
-			}
-
-			async function processBatch() {
-				const res = await fetch(ajaxurl, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body: new URLSearchParams({
-						action: 'petsync_process_batch',
-						nonce: '<?php echo esc_js( wp_create_nonce( 'petsync_sync' ) ); ?>',
-						offset: processed,
-						limit: batchSize
-					})
-				});
-				const data = await res.json();
-
-				if (!data.success) {
-					throw new Error(data.data || 'Batch processing failed');
-				}
-
-				processed += data.data.processed;
-				stats.created += data.data.stats.created || 0;
-				stats.updated += data.data.stats.updated || 0;
-				stats.unchanged += data.data.stats.unchanged || 0;
-
-				const percent = Math.round((processed / totalPets) * 100);
-				progressBar.style.width = percent + '%';
-				progressText.textContent = `<?php esc_html_e( 'Processing:', 'shelterkit-pets' ); ?> ${processed} / ${totalPets} (${percent}%)`;
-			}
-
-			async function finishSync() {
-				progressText.textContent = '<?php esc_html_e( 'Finishing up...', 'shelterkit-pets' ); ?>';
-
-				const res = await fetch(ajaxurl, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body: new URLSearchParams({
-						action: 'petsync_finish_sync',
-						nonce: '<?php echo esc_js( wp_create_nonce( 'petsync_sync' ) ); ?>'
-					})
-				});
-				const data = await res.json();
-
-				progressBar.style.width = '100%';
-				progressDiv.style.display = 'none';
-
-				resultsDiv.innerHTML = `
-					<strong><?php esc_html_e( 'Sync Complete!', 'shelterkit-pets' ); ?></strong><br>
-					<?php esc_html_e( 'Created:', 'shelterkit-pets' ); ?> ${stats.created} |
-					<?php esc_html_e( 'Updated:', 'shelterkit-pets' ); ?> ${stats.updated} |
-					<?php esc_html_e( 'Unchanged:', 'shelterkit-pets' ); ?> ${stats.unchanged}
-					${data.data?.removed ? ` | <?php esc_html_e( 'Removed:', 'shelterkit-pets' ); ?> ${data.data.removed}` : ''}
-				`;
-				resultsDiv.style.display = 'block';
-
-				// Update status text
-				statusDiv.innerHTML = '<p><strong><?php esc_html_e( 'Last sync:', 'shelterkit-pets' ); ?></strong> <?php esc_html_e( 'Just now', 'shelterkit-pets' ); ?></p>';
-			}
-		})();
-		</script>
 		<?php
 	}
 
@@ -491,60 +370,6 @@ class Petsync_Admin {
 					</p>
 				</div>
 			<?php else : ?>
-				<style>
-					.ps-sync-log .col-when     { width: 22%; }
-					.ps-sync-log .col-trigger  { width: 10%; }
-					.ps-sync-log .col-outcome  { width: 10%; }
-					.ps-sync-log .col-counts   { width: 38%; }
-					.ps-sync-log .col-details  { width: 20%; }
-					.ps-badge {
-						display: inline-block;
-						padding: 2px 8px;
-						border-radius: 10px;
-						font-size: 11px;
-						font-weight: 600;
-						text-transform: uppercase;
-						letter-spacing: 0.03em;
-					}
-					.ps-badge-trigger-manual { background: #e5e5e5; color: #2c3338; }
-					.ps-badge-trigger-cron   { background: #d6e9fb; color: #0a4b78; }
-					.ps-badge-outcome-success { background: #d4edda; color: #155724; }
-					.ps-badge-outcome-partial { background: #fff3cd; color: #856404; }
-					.ps-badge-outcome-error   { background: #f8d7da; color: #721c24; }
-					.ps-sync-log .counts code {
-						background: none;
-						padding: 0;
-						font-size: 13px;
-					}
-					.ps-sync-log .detail-row td {
-						background: #f6f7f7;
-						padding: 12px 16px;
-					}
-					.ps-sync-log .detail-row dl {
-						margin: 0;
-						display: grid;
-						grid-template-columns: 140px 1fr;
-						row-gap: 4px;
-						column-gap: 12px;
-					}
-					.ps-sync-log .detail-row dt { font-weight: 600; }
-					.ps-sync-log .detail-row dd { margin: 0; }
-					.ps-sync-log .detail-row pre {
-						margin: 4px 0 0;
-						padding: 8px;
-						background: #fff;
-						border: 1px solid #dcdcde;
-						border-radius: 3px;
-						white-space: pre-wrap;
-						font-size: 12px;
-					}
-					.ps-sync-log .note {
-						display: inline-block;
-						margin-left: 8px;
-						font-style: italic;
-						color: #50575e;
-					}
-				</style>
 				<table class="wp-list-table widefat striped ps-sync-log">
 					<thead>
 						<tr>
@@ -646,21 +471,6 @@ class Petsync_Admin {
 						<?php endforeach; ?>
 					</tbody>
 				</table>
-				<script>
-				(function() {
-					document.querySelectorAll('.ps-detail-toggle').forEach(function(btn) {
-						btn.addEventListener('click', function() {
-							const row = document.getElementById(btn.dataset.target);
-							if (!row) return;
-							const isHidden = row.style.display === 'none';
-							row.style.display = isHidden ? '' : 'none';
-							btn.textContent = isHidden
-								? <?php echo wp_json_encode( __( 'Hide details', 'shelterkit-pets' ) ); ?>
-								: <?php echo wp_json_encode( __( 'Show details', 'shelterkit-pets' ) ); ?>;
-						});
-					});
-				})();
-				</script>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -672,10 +482,49 @@ class Petsync_Admin {
 		}
 
 		wp_enqueue_style(
-			'petstablished-admin',
+			'petsync-admin',
 			PETSYNC_URL . 'assets/css/admin.css',
 			array(),
 			PETSYNC_VERSION
+		);
+
+		// The Sync Now runner and the Sync Log's details toggle. Each wires
+		// itself up only if its screen's markup is present.
+		wp_enqueue_script(
+			'petsync-admin',
+			PETSYNC_URL . 'assets/js/admin.js',
+			array(),
+			PETSYNC_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			'petsync-admin',
+			'petsyncAdmin',
+			array(
+				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
+				'nonce'     => wp_create_nonce( 'petsync_sync' ),
+				'batchSize' => (int) self::get_settings()['batch_size'],
+				'i18n'      => array(
+					'starting'       => __( 'Starting...', 'shelterkit-pets' ),
+					'fetching'       => __( 'Fetching pets from Petstablished...', 'shelterkit-pets' ),
+					'found'          => __( 'Found', 'shelterkit-pets' ),
+					'processingPets' => __( 'pets. Processing...', 'shelterkit-pets' ),
+					'processing'     => __( 'Processing:', 'shelterkit-pets' ),
+					'finishing'      => __( 'Finishing up...', 'shelterkit-pets' ),
+					'error'          => __( 'Error:', 'shelterkit-pets' ),
+					'syncNow'        => __( 'Sync Now', 'shelterkit-pets' ),
+					'complete'       => __( 'Sync Complete!', 'shelterkit-pets' ),
+					'created'        => __( 'Created:', 'shelterkit-pets' ),
+					'updated'        => __( 'Updated:', 'shelterkit-pets' ),
+					'unchanged'      => __( 'Unchanged:', 'shelterkit-pets' ),
+					'removed'        => __( 'Removed:', 'shelterkit-pets' ),
+					'lastSync'       => __( 'Last sync:', 'shelterkit-pets' ),
+					'justNow'        => __( 'Just now', 'shelterkit-pets' ),
+					'showDetails'    => __( 'Show details', 'shelterkit-pets' ),
+					'hideDetails'    => __( 'Hide details', 'shelterkit-pets' ),
+				),
+			)
 		);
 	}
 
