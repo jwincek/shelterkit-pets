@@ -110,6 +110,14 @@ class Petsync_Kennel_Cards {
 			array( 'wp-block-library' ),
 			PETSYNC_VERSION
 		);
+
+		wp_enqueue_script(
+			'petsync-kennel-cards',
+			PETSYNC_URL . 'assets/js/kennel-cards.js',
+			array(),
+			PETSYNC_VERSION,
+			true
+		);
 	}
 
 	// === Screens ===
@@ -340,14 +348,6 @@ class Petsync_Kennel_Cards {
 					</button>
 				</p>
 			</form>
-
-			<script>
-				document.querySelector( '[data-petsync-toggle-all]' )?.addEventListener( 'click', function () {
-					const boxes = document.querySelectorAll( '.petsync-kennel__picker input[type=checkbox]' );
-					const target = ! Array.from( boxes ).every( ( b ) => b.checked );
-					boxes.forEach( ( b ) => { b.checked = target; } );
-				} );
-			</script>
 		</div>
 		<?php
 	}

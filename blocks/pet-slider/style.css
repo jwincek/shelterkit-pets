@@ -181,6 +181,27 @@
 	color: var(--wp--preset--color--contrast-2, #666);
 }
 
+/*
+ * Typography chosen in the block's sidebar. render.php sets the custom
+ * property inline and adds the matching class only when a value was chosen,
+ * and that choice beats every layout and breakpoint below.
+ */
+.pet-slider--has-name-font-size .pet-slider__name {
+	font-size: var(--slider-name-font-size) !important;
+}
+
+.pet-slider--has-name-font-family .pet-slider__name {
+	font-family: var(--slider-name-font-family) !important;
+}
+
+.pet-slider--has-meta-font-size .pet-slider__meta {
+	font-size: var(--slider-meta-font-size) !important;
+}
+
+.pet-slider--has-meta-font-family .pet-slider__meta {
+	font-family: var(--slider-meta-font-family) !important;
+}
+
 /* Quick action buttons */
 .pet-slider__actions {
 	position: absolute;
