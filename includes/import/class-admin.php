@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Admin {
 
-	private const PAGE_SLUG = 'shelterkit-import';
+	private const PAGE_SLUG = 'shelterkit-pets-import';
 
 	/**
 	 * Core gates Tools → Import with this, and this is the same job. It also

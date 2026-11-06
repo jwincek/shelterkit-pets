@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Admin {
 
-	private const PAGE_SLUG = 'shelterkit-export';
+	private const PAGE_SLUG = 'shelterkit-pets-export';
 
 	/**
 	 * Core gates Tools → Export with this, and this is the same job.

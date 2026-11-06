@@ -258,7 +258,7 @@ async function shot( page, selector, file, opts = {} ) {
 	// place so the "ignored" notice shows. A sheet where everything is perfect
 	// photographs as a table of identical green rows and says nothing.
 	if ( process.env.WP_IMPORT_CSV ) {
-		await page.goto( `${ SITE }/wp-admin/edit.php?post_type=vcps_pet&page=shelterkit-import`, {
+		await page.goto( `${ SITE }/wp-admin/edit.php?post_type=vcps_pet&page=shelterkit-pets-import`, {
 			waitUntil: 'networkidle',
 		} );
 		await page.setInputFiles( 'input[name="petsync_csv"]', process.env.WP_IMPORT_CSV );
