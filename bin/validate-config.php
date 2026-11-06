@@ -12,8 +12,9 @@
  *   2. computed     — entities.json `computed` keys <-> Pet_Hydrator::
  *                     compute_field() match arms (a declared computed field
  *                     with no arm silently hydrates to null).
- *   3. profiles     — every name in summary/grid/comparison_fields resolves
- *                     to a real base/taxonomy/field/api_field/computed field.
+ *   3. profiles     — every name in summary/grid/comparison_fields and in
+ *                     staff_only_fields resolves to a real
+ *                     base/taxonomy/field/api_field/computed field.
  *   4. abilities    — every abilities.json ability has a resolvable callback
  *                     and a known permission; no dead callback mappings.
  *   5. taxonomies   — entity taxonomies reference real taxonomies, and every
@@ -203,7 +204,9 @@ foreach ( $match_arms as $arm ) {
 }
 
 // ── Check 3: profile field-list integrity ────────────────────────────────────
-foreach ( [ 'summary_fields', 'grid_fields', 'comparison_fields' ] as $list ) {
+// staff_only_fields too: a misspelt name there would redact nothing and say
+// nothing, which is the one way that list can fail.
+foreach ( [ 'summary_fields', 'grid_fields', 'comparison_fields', 'staff_only_fields' ] as $list ) {
 	foreach ( (array) ( $entity[ $list ] ?? [] ) as $name ) {
 		if ( ! in_array( $name, $valid_fields, true ) ) {
 			$add( 'error', 'profiles', "$list references '$name', which is not a declared base/taxonomy/field/api_field/computed field." );

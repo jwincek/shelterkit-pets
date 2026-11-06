@@ -513,7 +513,6 @@ class Petsync_Blocks {
 			'numerical_age'        => 'Age (human readable)',
 			'youtube_url'          => 'YouTube URL',
 			'adoption_form_url'    => 'Adoption Application URL',
-			'microchip_id'         => 'Microchip ID',
 			'special_needs_detail' => 'Special Needs Description',
 			'coat_pattern'         => 'Coat Pattern',
 			'secondary_color'      => 'Secondary Color',
@@ -528,6 +527,11 @@ class Petsync_Blocks {
 			'hypoallergenic'       => 'Hypoallergenic (tristate)',
 			'declawed'             => 'Declawed (tristate)',
 		);
+
+		// Not offered for binding: a staff-only field renders empty for every
+		// visitor, so a template that used one would look broken rather than
+		// private.
+		$api_fields = array_diff_key( $api_fields, array_flip( \Petsync\Core\Pet_Hydrator::staff_only_fields() ) );
 
 		foreach ( $api_fields as $key => $desc ) {
 			$keys[] = array(

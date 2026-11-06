@@ -995,6 +995,50 @@ class Pet_Hydrator {
 	}
 
 	/**
+	 * Fields only a user who can edit the pet may read.
+	 *
+	 * @return string[]
+	 */
+	public static function staff_only_fields(): array {
+		return array_values( (array) ( self::get_config()['staff_only_fields'] ?? [] ) );
+	}
+
+	/**
+	 * Remove staff-only fields from data on its way to a caller who may not
+	 * read them.
+	 *
+	 * Hydration itself never redacts: export and import need these fields, and
+	 * a WP-CLI export runs as no user at all. This runs at the public boundary
+	 * instead, on every ability's output (see Provider::register_ability()).
+	 * It walks the whole structure, because a pet can arrive alone, in a list,
+	 * or nested in a comparison, and each pet is checked against its own id.
+	 *
+	 * @param mixed $data An ability's output — a pet, a list of pets, a WP_Error.
+	 * @return mixed The same, minus fields this user may not read.
+	 */
+	public static function redact( mixed $data ): mixed {
+		if ( ! is_array( $data ) ) {
+			return $data;
+		}
+
+		$fields = self::staff_only_fields();
+
+		if ( isset( $data['id'] ) && array_intersect_key( $data, array_flip( $fields ) ) ) {
+			if ( ! current_user_can( 'edit_post', (int) $data['id'] ) ) {
+				$data = array_diff_key( $data, array_flip( $fields ) );
+			}
+		}
+
+		foreach ( $data as $key => $value ) {
+			if ( is_array( $value ) ) {
+				$data[ $key ] = self::redact( $value );
+			}
+		}
+
+		return $data;
+	}
+
+	/**
 	 * Get entity config from entities.json.
 	 *
 	 * @return array
