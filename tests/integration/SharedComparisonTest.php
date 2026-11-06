@@ -116,4 +116,25 @@ final class SharedComparisonTest extends PetTestCase {
 			'the guard must not have removed the ability to clear'
 		);
 	}
+
+	/**
+	 * The link has to open the archive WordPress actually serves. It was
+	 * home_url( '/pets/' ), which on a new site's plain permalinks opened the
+	 * home page with no comparison on it. Found on a clean install.
+	 */
+	public function test_the_share_link_opens_the_real_archive(): void {
+		$a = $this->make_manual_pet();
+		$b = $this->make_manual_pet();
+
+		$result = wp_get_ability( 'petsync/update-comparison' )->execute(
+			array(
+				'action' => 'set',
+				'ids'    => array( $a, $b ),
+			)
+		);
+
+		$archive = get_post_type_archive_link( 'vcps_pet' );
+		$this->assertNotSame( home_url( '/pets/' ), $archive, 'the suite runs on plain permalinks, where the old link was wrong; otherwise this proves nothing' );
+		$this->assertSame( add_query_arg( 'compare', "$a,$b", $archive ), $result['shareUrl'] );
+	}
 }
