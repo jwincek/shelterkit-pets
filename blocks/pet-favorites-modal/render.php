@@ -89,6 +89,16 @@ $context = array(
 	'showCompare' => $show_compare,
 );
 
+// Fills the trigger's heart. Bound as a class on the button, not as `fill` on
+// the SVG icon: WordPress's server-side processor refuses directives on SVG
+// elements and logs a notice on every page that renders this block.
+wp_interactivity_state(
+	'petsync/favorites-modal',
+	array(
+		'hasFavorites' => $fav_count > 0,
+	)
+);
+
 $router_region = wp_json_encode(
 	array(
 		'id'       => 'pet-favorites-modal',
@@ -115,6 +125,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		class="pet-favorites-modal__trigger"
 		data-wp-on--click="actions.toggleModal"
 		data-wp-bind--aria-expanded="context.isOpen"
+		data-wp-class--has-favorites="state.hasFavorites"
 		aria-label="<?php esc_attr_e( 'View favorites', 'shelterkit-pets' ); ?>"
 	>
 		<svg
@@ -124,7 +135,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			width="24" height="24"
 			fill="none" stroke="currentColor" stroke-width="2"
 			stroke-linecap="round" stroke-linejoin="round"
-			data-wp-bind--fill="state.triggerFill"
 		>
 			<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
 		</svg>

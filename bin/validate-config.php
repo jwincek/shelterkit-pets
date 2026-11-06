@@ -28,6 +28,9 @@
  *                     claims are backed by a suite that actually ran.
  *  14. post-types    — postType comparisons in editor scripts name a post
  *                     type that actually exists.
+ *  15. svg-directives — no Interactivity directive sits on or inside an
+ *                     <svg>, which the server-side processor refuses with a
+ *                     notice on every render.
  *
  *  13. block-controls — attributes and their controls agree in BOTH
  *                     directions: every attribute the server honours can be
@@ -1150,6 +1153,30 @@ foreach ( array_merge( glob( $root . '/assets/js/*.js' ), glob( $root . '/blocks
 			str_replace( $root . '/', '', $script ) . " compares postType against '$literal', which is not a registered post type. "
 			. "The pet post type is 'vcps_pet'; a wrong literal here is permanently false and hides the feature it guards."
 		);
+	}
+}
+
+// ── Check 15: no Interactivity directives inside an <svg> ────────────────────
+// WordPress's server-side processor refuses a directive on or inside an SVG
+// element and logs a _doing_it_wrong notice on every render. The favorites
+// modal bound `fill` on its icon this way, so every pet page logged two notices
+// on a debug-enabled site. Found on a clean install, not by any test. The fix
+// is to bind on an HTML ancestor and let CSS reach the SVG.
+$markup_files = array_merge(
+	glob( $root . '/blocks/*/render.php' ) ?: [],
+	glob( $root . '/blocks/*/partials/*.php' ) ?: [],
+	glob( $root . '/parts/*.html' ) ?: [],
+	glob( $root . '/templates/*.html' ) ?: []
+);
+foreach ( $markup_files as $markup_file ) {
+	$markup = (string) file_get_contents( $markup_file );
+	if ( preg_match_all( '#<svg\b.*?</svg>#s', $markup, $svgs, PREG_OFFSET_CAPTURE ) ) {
+		foreach ( $svgs[0] as [ $svg, $offset ] ) {
+			if ( str_contains( $svg, 'data-wp-' ) ) {
+				$line = substr_count( substr( $markup, 0, $offset ), "\n" ) + 1;
+				$add( 'error', 'svg-directives', substr( $markup_file, strlen( $root ) + 1 ) . ":$line has an Interactivity directive inside an <svg>, which the server-side processor refuses with a notice on every render. Bind it on an HTML ancestor instead." );
+			}
+		}
 	}
 }
 

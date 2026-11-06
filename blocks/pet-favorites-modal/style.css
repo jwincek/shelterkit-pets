@@ -68,6 +68,10 @@
 	transition: fill 0.2s ease;
 }
 
+.pet-favorites-modal__trigger.has-favorites .pet-favorites-modal__trigger-icon {
+	fill: currentColor;
+}
+
 .pet-favorites-modal__trigger-count {
 	position: absolute;
 	top: -4px;

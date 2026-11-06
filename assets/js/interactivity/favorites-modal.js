@@ -438,10 +438,10 @@ function resetModalState( modalState ) {
 
 const { state, actions, callbacks } = store( 'petsync/favorites-modal', {
 	state: {
-		get triggerFill() {
-			return getGlobalState().favorites.length > 0
-				? 'currentColor'
-				: 'none';
+		// A class on the trigger button rather than `fill` on its <svg>: the
+		// server-side processor refuses directives on SVG elements.
+		get hasFavorites() {
+			return getGlobalState().favorites.length > 0;
 		},
 
 		// Clear-all confirmation — fully state-driven.
