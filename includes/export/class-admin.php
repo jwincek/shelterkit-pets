@@ -25,7 +25,7 @@ class Admin {
 
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_page' ) );
-		add_action( 'admin_post_shelterkit_export', array( $this, 'handle_download' ) );
+		add_action( 'admin_post_petsync_export', array( $this, 'handle_download' ) );
 	}
 
 	public function register_page(): void {
@@ -61,8 +61,8 @@ class Admin {
 			<h1><?php esc_html_e( 'Export Pets', 'shelterkit-pets' ); ?></h1>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="shelterkit_export" />
-				<?php wp_nonce_field( 'shelterkit_export' ); ?>
+				<input type="hidden" name="action" value="petsync_export" />
+				<?php wp_nonce_field( 'petsync_export' ); ?>
 
 				<table class="form-table" role="presentation">
 					<tr>
@@ -144,7 +144,7 @@ class Admin {
 			wp_die( esc_html__( 'You are not allowed to export pets.', 'shelterkit-pets' ) );
 		}
 
-		check_admin_referer( 'shelterkit_export' );
+		check_admin_referer( 'petsync_export' );
 
 		$format = isset( $_POST['format'] ) && 'json' === $_POST['format'] ? 'json' : 'csv';
 		$mode   = isset( $_POST['mode'] ) && Schema::FULL === $_POST['mode'] ? Schema::FULL : Schema::PORTABLE;

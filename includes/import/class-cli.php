@@ -46,9 +46,9 @@ class CLI {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp shelterkit import pets.csv
-	 *     wp shelterkit import pets.csv --commit
-	 *     wp shelterkit import pets.csv --commit --on-match=skip
+	 *     wp shelterkit-pets import pets.csv
+	 *     wp shelterkit-pets import pets.csv --commit
+	 *     wp shelterkit-pets import pets.csv --commit --on-match=skip
 	 *
 	 * @param string[]              $args       Positional arguments.
 	 * @param array<string, string> $assoc_args Flags.

@@ -229,9 +229,27 @@ function petsync_init(): void {
 	// the autoloader above — includes/export/class-schema.php and friends — so
 	// nothing needs requiring.
 	if ( defined( 'WP_CLI' ) && WP_CLI ) {
+		\WP_CLI::add_command( 'shelterkit-pets', \Petsync\Export\CLI::class );
+		\WP_CLI::add_command( 'shelterkit-pets import', \Petsync\Import\CLI::class );
+		\WP_CLI::add_command( 'shelterkit-pets migrate', \Petsync\CLI\Migrate::class );
+
+		// The old names, kept working but deprecated. `wp shelterkit` is the
+		// whole ShelterKit family's namespace, not this plugin's: ShelterKit
+		// Donations already uses `wp shelterkit-donations`, and a sibling's
+		// `wp shelterkit migrate` would collide with this one. Remove these
+		// once nobody can still be scripting the 1.1.0 names.
 		\WP_CLI::add_command( 'shelterkit', \Petsync\Export\CLI::class );
 		\WP_CLI::add_command( 'shelterkit import', \Petsync\Import\CLI::class );
 		\WP_CLI::add_command( 'shelterkit migrate', \Petsync\CLI\Migrate::class );
+
+		foreach ( array( 'export', 'import', 'migrate' ) as $subcommand ) {
+			\WP_CLI::add_hook(
+				"before_invoke:shelterkit $subcommand",
+				static function () use ( $subcommand ): void {
+					\WP_CLI::warning( "`wp shelterkit $subcommand` is deprecated and will be removed. Use `wp shelterkit-pets $subcommand`." );
+				}
+			);
+		}
 	}
 
 	// Admin & Sync (admin only).

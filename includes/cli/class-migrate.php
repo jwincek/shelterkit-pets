@@ -54,10 +54,10 @@ class Migrate {
 	 * ## EXAMPLES
 	 *
 	 *     # See what an upgrade would do, before doing it.
-	 *     wp shelterkit migrate --dry-run
+	 *     wp shelterkit-pets migrate --dry-run
 	 *
 	 *     # Run them, deliberately, with timings.
-	 *     wp shelterkit migrate
+	 *     wp shelterkit-pets migrate
 	 *
 	 * @param string[]              $args       Positional arguments.
 	 * @param array<string, string> $assoc_args Flags.
