@@ -149,10 +149,14 @@ class Petsync_Admin {
 		// here too.
 		$sanitized[ \Petsync\Schema\Animal_Shelter::SETTING ] = ! empty( $input[ \Petsync\Schema\Animal_Shelter::SETTING ] );
 
-		// Reschedule cron if auto_sync or interval changed.
-		$old = self::get_settings();
-		if ( $sanitized['auto_sync'] !== $old['auto_sync'] || $sanitized['sync_interval'] !== $old['sync_interval'] ) {
-			self::reschedule_cron( $sanitized['auto_sync'], $sanitized['sync_interval'] );
+		// Reschedule cron if auto_sync, the interval, or whether there is a key
+		// at all changed. The last matters because nothing is scheduled without
+		// a key: auto_sync is on by default, so entering a key for the first
+		// time changes neither of the other two.
+		$old         = self::get_settings();
+		$key_changed = ( '' === (string) $old['public_key'] ) !== ( '' === $sanitized['public_key'] );
+		if ( $sanitized['auto_sync'] !== $old['auto_sync'] || $sanitized['sync_interval'] !== $old['sync_interval'] || $key_changed ) {
+			self::reschedule_cron( $sanitized['auto_sync'], $sanitized['sync_interval'], $sanitized['public_key'] );
 		}
 
 		return $sanitized;
@@ -165,10 +169,14 @@ class Petsync_Admin {
 	 * SCHEDULE_6PM_SKIP_SUNDAY pseudo-interval is implemented on top of WP's
 	 * built-in 'daily' recurrence — anchored to 18:00 in the site timezone,
 	 * with the Sunday short-circuit handled by Petsync_Sync::run_sync().
+	 *
+	 * Nothing is scheduled without an API key. Most shelters never enter one,
+	 * since no account is needed, and they would otherwise run a sync every
+	 * evening that can only fail and fill the Sync Log with the failures.
 	 */
-	public static function reschedule_cron( bool $auto_sync, string $interval ): void {
+	public static function reschedule_cron( bool $auto_sync, string $interval, string $public_key ): void {
 		wp_clear_scheduled_hook( 'petsync_scheduled_sync' );
-		if ( ! $auto_sync ) {
+		if ( ! $auto_sync || '' === $public_key ) {
 			return;
 		}
 

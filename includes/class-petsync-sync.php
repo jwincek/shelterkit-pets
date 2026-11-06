@@ -273,6 +273,15 @@ class Petsync_Sync {
 		$started  = time();
 		$settings = Petsync_Admin::get_settings();
 
+		// No key, nothing to sync. A scheduled run without one was scheduled
+		// by a version that did so regardless, on every install, so it stops
+		// the schedule instead of logging a failure every evening. Checked
+		// before the Sunday skip, which would otherwise log an entry first.
+		if ( 'cron' === $trigger && empty( $settings['public_key'] ) ) {
+			wp_clear_scheduled_hook( 'petsync_scheduled_sync' );
+			return false;
+		}
+
 		// Sunday skip: when the user has chosen the 6pm-skip-Sunday schedule
 		// and this cron run lands on a Sunday in the site timezone, record
 		// the skip and bail. Recording it is intentional — proves to the

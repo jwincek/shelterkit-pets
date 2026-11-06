@@ -79,7 +79,7 @@ register_activation_hook(
 		// and Sunday-skip semantics apply identically at activation and settings save.
 		$settings = Petsync_Admin::get_settings();
 		if ( ! wp_next_scheduled( 'petsync_scheduled_sync' ) ) {
-			Petsync_Admin::reschedule_cron( $settings['auto_sync'], $settings['sync_interval'] );
+			Petsync_Admin::reschedule_cron( $settings['auto_sync'], $settings['sync_interval'], (string) $settings['public_key'] );
 		}
 	}
 );
@@ -528,7 +528,7 @@ function petsync_migrate_1_option_names(): void {
 	// Move the scheduled sync to the renamed hook.
 	wp_clear_scheduled_hook( 'petstablished_scheduled_sync' );
 	$settings = Petsync_Admin::get_settings();
-	Petsync_Admin::reschedule_cron( (bool) $settings['auto_sync'], $settings['sync_interval'] );
+	Petsync_Admin::reschedule_cron( (bool) $settings['auto_sync'], $settings['sync_interval'], (string) $settings['public_key'] );
 }
 
 /**
