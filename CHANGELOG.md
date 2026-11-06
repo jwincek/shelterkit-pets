@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-06
+
+### Security
+- **Microchip numbers are no longer readable by the public.** No page displayed
+  one, but any visitor could read every listed pet's microchip number through
+  the REST API and the plugin's public abilities: `get-pet`, `batch-get-pets` and
+  the comparison abilities, which block bindings and MCP clients also use. They
+  are now returned only to users who can edit the pet. The editor, import and
+  export are unchanged. Microchip ID is no longer offered as a block binding,
+  because it would print empty for every visitor.
+- The provider's record ID (`_pet_ps_id`) is no longer exposed through the REST
+  API. Nothing outside the sync uses it.
+
+### Added
+- **Settings for 25 block options that existed but could not be changed.** The
+  Pet Comparison block had no settings at all, so which rows it showed was
+  fixed. Pet Filters gains its status, compatibility and presentation settings,
+  and Pet Gallery its thumbnail columns, badges and video settings.
+
+### Changed
+- **The WP-CLI commands are now `wp shelterkit-pets export`, `import` and
+  `migrate`.** `wp shelterkit` belongs to the whole ShelterKit family, and
+  ShelterKit Donations already uses `wp shelterkit-donations`.
+- **The automatic sync is only scheduled once a Petstablished key is entered.**
+  Sites without one ran a sync every evening that could only fail, and filled
+  the Sync Log with the failures. Those sites stop on their own after updating.
+- The Import and Export screens moved to `page=shelterkit-pets-import` and
+  `page=shelterkit-pets-export`. Update any bookmarks.
+- Script and script-module handles are `petsync-*` rather than
+  `petstablished-*`, for any theme or plugin that dequeues them.
+- The readme lists every external service the plugin contacts, now including
+  Amazon S3 (where Petstablished keeps pet photos) and YouTube (for pet videos).
+  It also explains what to do when a kennel card is cut off, and why fixes to
+  the shipped card do not reach a design you have edited.
+
+### Deprecated
+- `wp shelterkit export`, `import` and `migrate`. They still work, with a
+  warning naming the replacement, and will be removed in a future release.
+
+### Fixed
+- **The Pet Details block's editor interface never loaded on a clean site.**
+  Its editor script ran before WordPress's editor packages and stopped with an
+  error, so the block could not be arranged in the editor. Sites where another
+  plugin happened to load those packages first never saw it.
+- **Gallery: Show Thumbnails and Enable Lightbox did nothing.** Both settings
+  saved, and neither was read. Both now take effect.
+- **The Pet Gallery block never previewed in the editor**, and the Pet Data
+  Bindings sidebar told you to open a pet while you were editing one. Both
+  compared against the wrong post type.
+- **Pet Slider font choices with a quoted name were ignored on the front end.**
+  That includes most theme fonts, such as Twenty Twenty-Five's "Fira Code". The
+  editor preview showed them correctly, which is why it went unnoticed.
+- **Editor translations never loaded.** The block settings and the pet details
+  panels stayed in English whatever language pack was installed.
+- **Two PHP notices on every pet page** from the favorites button, whenever
+  `WP_DEBUG` is on.
+- **The comparison share link returned by the abilities opened the home page**
+  on sites with default permalinks, and gave a 404 where the pets archive is not
+  at `/pets/`. The Share button itself was not affected.
+- **Two "Shelter Details" screens appeared** when a second ShelterKit plugin was
+  installed, both editing the same details.
+- **"Delete all data" left data behind:** the kennel card preview setting, pets
+  in the trash, unfinished drafts, and a WordPress option for the default pet
+  status. All are removed now. Pet photos are kept on purpose, because they are
+  Media Library items that may be used elsewhere. The setting's description and
+  the FAQ now say so, and say that it deletes pets entered by hand, which it
+  always did.
+
 ## [1.5.0] - 2026-08-22
 
 ### Added

@@ -4,7 +4,7 @@ Tags: pets, adoption, animal shelter, rescue, animals
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.5.0
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -163,6 +163,19 @@ Pet photos are kept either way. They are ordinary Media Library items and may be
 
 == Changelog ==
 
+= 1.6.0 =
+* Security: microchip numbers could be read by any visitor through the REST API and the plugin's public abilities, although no page showed them. They are now visible only to people who can edit the pet.
+* New: 25 block settings that existed but could not be changed, across the Pet Comparison, Pet Filters and Pet Gallery blocks.
+* Changed: WP-CLI commands are now `wp shelterkit-pets export`, `import` and `migrate`. The old `wp shelterkit` names still work, with a warning.
+* Changed: the automatic sync is scheduled only once a Petstablished key is entered, so sites without one no longer log a failed sync every evening.
+* Fixed: the Pet Details block's editor interface failed to load on many sites.
+* Fixed: the gallery's Show Thumbnails and Enable Lightbox settings did nothing.
+* Fixed: Pet Slider font choices were ignored on the front end when the font name contained quotes, as most theme fonts do.
+* Fixed: editor translations never loaded, so the block settings stayed in English.
+* Fixed: two PHP notices on every pet page when debugging is on.
+* Fixed: two "Shelter Details" screens appeared when a second ShelterKit plugin was installed.
+* Fixed: "Delete all data" left trashed pets, unfinished drafts and two settings behind. Pet photos are deliberately kept in the Media Library, and the setting now says so.
+
 = 1.5.0 =
 * New: settings for Coat Pattern, Special Needs, Hypoallergenic and Declawed, which the blocks already honoured but the editor never offered — this is why cards kept printing Coat Pattern after Coat was switched off.
 * New: choose which health answers to show — known answers only, everything including unknown, or only what is true of the animal.
@@ -219,6 +232,9 @@ Pet photos are kept either way. They are ordinary Media Library items and may be
 * Built on the WordPress Abilities API and Block Bindings.
 
 == Upgrade Notice ==
+
+= 1.6.0 =
+Security: any visitor could read pets' microchip numbers through the REST API. They are now visible only to staff. Also fixes the Pet Details block editor and adds 25 block settings. WP-CLI commands are now `wp shelterkit-pets`; the old names still work for now.
 
 = 1.5.0 =
 Half-page cards printed one per sheet instead of two, and a full-page card left half the sheet empty. Both fixed — reprint any cards made at those sizes. If you have edited the card design in the Site Editor, these fixes will not reach you: see the FAQ.
