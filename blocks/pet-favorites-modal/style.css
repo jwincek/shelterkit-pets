@@ -69,7 +69,7 @@
 }
 
 .pet-favorites-modal__trigger.has-favorites .pet-favorites-modal__trigger-icon {
-	fill: currentColor;
+	fill: currentcolor;
 }
 
 .pet-favorites-modal__trigger-count {
