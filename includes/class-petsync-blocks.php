@@ -348,7 +348,17 @@ class Petsync_Blocks {
 			}
 
 			// Register with render callback for server-side rendering.
-			register_block_type( $block_path );
+			$block_type = register_block_type( $block_path );
+
+			// Core loads translations for a block.json editor script only when
+			// its .asset.php lists wp-i18n, and with no build step there is no
+			// .asset.php. Without this, pet-details' editor strings would stay
+			// English however completely translate.wordpress.org translated them.
+			if ( $block_type ) {
+				foreach ( $block_type->editor_script_handles as $handle ) {
+					wp_set_script_translations( $handle, 'shelterkit-pets' );
+				}
+			}
 		}
 	}
 
@@ -467,6 +477,13 @@ class Petsync_Blocks {
 			true
 		);
 
+		// A script's __() strings load from the WordPress.org language packs
+		// only once its handle is tied to the text domain. Without this the
+		// editor stays in English however much of it has been translated.
+		foreach ( array( '-blocks-editor', '-slider-editor', '-listing-grid-editor' ) as $suffix ) {
+			wp_set_script_translations( self::NAMESPACE . $suffix, 'shelterkit-pets' );
+		}
+
 		// Editor styles.
 		wp_enqueue_style(
 			self::NAMESPACE . '-editor',
@@ -513,7 +530,6 @@ class Petsync_Blocks {
 			'numerical_age'        => 'Age (human readable)',
 			'youtube_url'          => 'YouTube URL',
 			'adoption_form_url'    => 'Adoption Application URL',
-			'microchip_id'         => 'Microchip ID',
 			'special_needs_detail' => 'Special Needs Description',
 			'coat_pattern'         => 'Coat Pattern',
 			'secondary_color'      => 'Secondary Color',
@@ -528,6 +544,11 @@ class Petsync_Blocks {
 			'hypoallergenic'       => 'Hypoallergenic (tristate)',
 			'declawed'             => 'Declawed (tristate)',
 		);
+
+		// Not offered for binding: a staff-only field renders empty for every
+		// visitor, so a template that used one would look broken rather than
+		// private.
+		$api_fields = array_diff_key( $api_fields, array_flip( \Petsync\Core\Pet_Hydrator::staff_only_fields() ) );
 
 		foreach ( $api_fields as $key => $desc ) {
 			$keys[] = array(

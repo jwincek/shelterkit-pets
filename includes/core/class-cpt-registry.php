@@ -168,6 +168,7 @@ class CPT_Registry {
 			$prefix    = $config['meta_prefix'] ?? '_';
 
 			$registered = [];
+			$staff_only = (array) ( $config['staff_only_fields'] ?? [] );
 
 			foreach ( $config['fields'] ?? [] as $field => $field_config ) {
 				$declared = $field_config['type'] ?? 'string';
@@ -184,7 +185,7 @@ class CPT_Registry {
 						// A schema-bearing type must pass its schema through, or
 						// REST rejects the value and the save fails silently —
 						// which in the editor looks like a control that does nothing.
-						'show_in_rest'      => ( $in_rest && $schema ) ? [ 'schema' => $schema ] : $in_rest,
+						'show_in_rest'      => self::rest_visibility( $in_rest, $schema, $declared, in_array( $field, $staff_only, true ) ),
 						'sanitize_callback' => self::get_sanitizer( $declared ),
 						'auth_callback'     => fn() => current_user_can( 'edit_posts' ),
 					]
@@ -227,13 +228,36 @@ class CPT_Registry {
 						'type'              => self::map_type( $declared_type ),
 						'description'       => $editable['label'] ?? $field,
 						'single'            => true,
-						'show_in_rest'      => true,
+						'show_in_rest'      => self::rest_visibility( true, null, $declared_type, in_array( $field, $staff_only, true ) ),
 						'sanitize_callback' => self::get_sanitizer( $declared_type ),
 						'auth_callback'     => fn() => current_user_can( 'edit_posts' ),
 					]
 				);
 			}
 		}
+	}
+
+	/**
+	 * The show_in_rest argument for one meta field.
+	 *
+	 * A staff-only field stays in REST, because the editor's sidebar panels
+	 * read and write meta through it, but only in the edit context, which
+	 * requires permission to edit the pet. A public (view) response leaves it
+	 * out.
+	 *
+	 * @param bool       $in_rest    Whether the field is in REST at all.
+	 * @param array|null $schema     The type's own schema, where it needs one.
+	 * @param string     $type       Declared field type.
+	 * @param bool       $staff_only Whether the field is in staff_only_fields.
+	 * @return bool|array
+	 */
+	private static function rest_visibility( bool $in_rest, ?array $schema, string $type, bool $staff_only ): bool|array {
+		if ( $in_rest && $staff_only ) {
+			$schema            = $schema ?? [ 'type' => self::map_type( $type ) ];
+			$schema['context'] = [ 'edit' ];
+		}
+
+		return ( $in_rest && $schema ) ? [ 'schema' => $schema ] : $in_rest;
 	}
 
 	/**

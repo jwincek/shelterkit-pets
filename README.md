@@ -206,8 +206,8 @@ sizes share one part rather than having one each.
 - **Optional `AnimalShelter` structured data** — refines the organisation an
   active SEO plugin already describes (SEOPress, Slim SEO, The SEO Framework)
   rather than emitting a competing one. Off by default.
-- **WP-CLI**: `wp shelterkit import`, `wp shelterkit export`, and
-  `wp shelterkit migrate` — the last so a database upgrade is deliberate and
+- **WP-CLI**: `wp shelterkit-pets import`, `wp shelterkit-pets export`, and
+  `wp shelterkit-pets migrate` — the last so a database upgrade is deliberate and
   observable rather than firing on whichever page load happens to be first.
 
 ## Contributing

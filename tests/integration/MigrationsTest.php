@@ -448,7 +448,7 @@ final class MigrationsTest extends PetTestCase {
 	/**
 	 * The rail is the riskiest part of an upgrade and it used to fire on
 	 * whichever page load happened to be first — on a live site, a member of
-	 * the public's. `wp shelterkit migrate` makes it deliberate, and both paths
+	 * the public's. `wp shelterkit-pets migrate` makes it deliberate, and both paths
 	 * share this one implementation so they cannot drift.
 	 */
 	public function test_a_dry_run_reports_every_pending_migration_and_writes_nothing(): void {
@@ -577,7 +577,7 @@ final class MigrationsTest extends PetTestCase {
 	}
 
 	/**
-	 * The reporter is what `wp shelterkit migrate` prints. An upgrade that
+	 * The reporter is what `wp shelterkit-pets migrate` prints. An upgrade that
 	 * reports nothing is the situation this command exists to end.
 	 */
 	public function test_the_reporter_is_called_for_every_migration(): void {

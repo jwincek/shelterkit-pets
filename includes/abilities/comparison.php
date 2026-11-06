@@ -81,7 +81,7 @@ function update( array $input ): array {
 		'pets'     => $pets,
 		'count'    => count( $ids ),
 		'max'      => $max,
-		'shareUrl' => add_query_arg( 'compare', implode( ',', $ids ), home_url( '/pets/' ) ),
+		'shareUrl' => share_url( $ids ),
 	];
 }
 
@@ -112,6 +112,23 @@ function get_comparison( array $input = [] ): array {
 		'pets'     => $pets,
 		'count'    => count( $ids ),
 		'max'      => 4,
-		'shareUrl' => add_query_arg( 'compare', implode( ',', $ids ), home_url( '/pets/' ) ),
+		'shareUrl' => share_url( $ids ),
 	];
+}
+
+/**
+ * The link that reopens a comparison.
+ *
+ * The pet archive, wherever it actually is. This was home_url( '/pets/' ), which
+ * is right only when pretty permalinks are on and the archive slug is the
+ * default. With plain permalinks, WordPress's default for a new site, it opened
+ * the home page with no comparison on it. A site that changed the slug got a
+ * 404. The blocks and the front-end script already used the archive link.
+ *
+ * @param int[] $ids Pets in the comparison.
+ */
+function share_url( array $ids ): string {
+	$archive = get_post_type_archive_link( 'vcps_pet' ) ?: home_url( '/pets/' );
+
+	return add_query_arg( 'compare', implode( ',', $ids ), $archive );
 }

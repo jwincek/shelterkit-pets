@@ -48,6 +48,7 @@
         "ps_id": {
           "type": "string",
           "default": "",
+          "show_in_rest": false,
           "description": "Provider's record ID. Primary lookup key for sync, unique only within a provider."
         },
         "api_response": {
@@ -494,7 +495,11 @@
         "hypoallergenic",
         "declawed"
       ],
-      "_comment_attribute_terms": "Canonical field -> pet_attribute term slug. Applied AFTER hydration, against the resolved tristate, so the term and the field can never disagree. Replaced attribute_map, which was keyed on provider field names and read raw API data — a second derivation that silently dropped non-string values and never ran at all for hand-entered pets.",
+      "_comment_staff_only_fields": "Fields only a user who can edit the pet may read. The hydrator still returns them, because export and import need them and a WP-CLI export runs as no user at all. They are removed at the public boundary instead: every ability's output passes through Pet_Hydrator::redact(), and their post meta is registered for REST's edit context only. A microchip number is why this exists. It is the key to an owner's registry record, nothing on a public page shows one, and before this list existed any visitor could read every listed pet's through REST or an ability.",
+      "staff_only_fields": [
+        "microchip_id"
+      ],
+      "_comment_attribute_terms":"Canonical field -> pet_attribute term slug. Applied AFTER hydration, against the resolved tristate, so the term and the field can never disagree. Replaced attribute_map, which was keyed on provider field names and read raw API data — a second derivation that silently dropped non-string values and never ran at all for hand-entered pets.",
       "attribute_terms": {
         "ok_with_dogs": "good-with-dogs",
         "ok_with_cats": "good-with-cats",

@@ -87,6 +87,9 @@
 	-->
 	<rule ref="WordPress.Files.FileName">
 		<exclude-pattern>/tests/*</exclude-pattern>
+		<!-- register_block_type() looks for exactly <script>.asset.php beside a
+		     block.json script; the name is core's, not ours to choose. -->
+		<exclude-pattern>*.asset.php</exclude-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<exclude-pattern>/tests/*</exclude-pattern>

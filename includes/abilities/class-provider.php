@@ -115,7 +115,11 @@ class Provider {
 			'label'               => $config['label'] ?? $name,
 			'description'         => $config['description'] ?? '',
 			'category'            => $config['category'] ?? 'pets',
-			'execute_callback'    => $execute_callback,
+			// Every ability's output leaves through here, so staff-only fields
+			// are removed once, for every ability including any added later,
+			// rather than in each callback. REST, MCP and the block bindings
+			// all execute abilities, so all three are covered.
+			'execute_callback'    => static fn( ...$input ) => \Petsync\Core\Pet_Hydrator::redact( $execute_callback( ...$input ) ),
 			'permission_callback' => $permission_callback,
 		];
 

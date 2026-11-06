@@ -35,6 +35,11 @@ final class UninstallTest extends PetTestCase {
 		$synced = $this->make_synced_pet();
 		wp_set_object_terms( $manual, 'Uninstall Beagle', 'pet_breed' );
 
+		// Statuses 'any' does not include. A clean-install uninstall left both.
+		$trashed   = $this->make_manual_pet( array( 'post_status' => 'trash' ) );
+		$abandoned = $this->make_manual_pet( array( 'post_status' => 'auto-draft' ) );
+		$this->assertNotFalse( get_option( 'default_term_pet_status' ), 'pet_status declares a default term, so core has written this' );
+
 		$photo = self::factory()->attachment->create_object(
 			'uninstall-photo.jpg',
 			$synced,
@@ -57,10 +62,15 @@ final class UninstallTest extends PetTestCase {
 			$this->make_customised_part( 'petstablished-sync' ),
 		);
 
-		$this->run_uninstall();
+		// Read while nothing is registered: re-registering pet_status afterwards
+		// makes core write its default-term option all over again.
+		$default_term = $this->run_uninstall( static fn() => get_option( 'default_term_pet_status' ) );
 
 		$this->assertNull( get_post( $manual ), 'a hand-entered pet is deleted too' );
 		$this->assertNull( get_post( $synced ) );
+		$this->assertNull( get_post( $trashed ), 'a trashed pet is still a pet' );
+		$this->assertNull( get_post( $abandoned ), 'and so is the auto-draft Add New leaves behind' );
+		$this->assertFalse( $default_term, "core's default-term option outlived its taxonomy" );
 		$this->assertNull( term_exists( 'Uninstall Beagle', 'pet_breed' ), 'terms are deleted although the taxonomy was unregistered' );
 
 		$this->assertFalse( get_option( 'petsync_settings' ) );
@@ -135,8 +145,13 @@ final class UninstallTest extends PetTestCase {
 	 * Run uninstall.php as WordPress does: with nothing of this plugin's
 	 * registered. Registrations come back from the plugin's own registry
 	 * afterwards, exactly as PetTestCase::set_up() rebuilds them.
+	 *
+	 * @param callable|null $inspect Called after the uninstall and before
+	 *                               anything is re-registered; its result is
+	 *                               returned.
+	 * @return mixed
 	 */
-	private function run_uninstall(): void {
+	private function run_uninstall( ?callable $inspect = null ): mixed {
 		defined( 'WP_UNINSTALL_PLUGIN' ) || define( 'WP_UNINSTALL_PLUGIN', 'shelterkit-pets/shelterkit-pets.php' );
 
 		$taxonomies = get_object_taxonomies( 'vcps_pet' );
@@ -152,6 +167,8 @@ final class UninstallTest extends PetTestCase {
 			} else {
 				require PETSYNC_DIR . 'uninstall.php';
 			}
+
+			return $inspect ? $inspect() : null;
 		} finally {
 			CPT_Registry::register_post_types();
 			CPT_Registry::register_taxonomies();

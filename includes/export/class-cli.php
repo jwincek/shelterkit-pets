@@ -53,9 +53,9 @@ class CLI {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp shelterkit export --file=pets.csv
-	 *     wp shelterkit export --format=json --mode=full --status=available
-	 *     wp shelterkit export --provider=manual --file=hand-entered.csv
+	 *     wp shelterkit-pets export --file=pets.csv
+	 *     wp shelterkit-pets export --format=json --mode=full --status=available
+	 *     wp shelterkit-pets export --provider=manual --file=hand-entered.csv
 	 *
 	 * @param array<int, string>    $args       Positional args.
 	 * @param array<string, string> $assoc_args Flags.
