@@ -51,6 +51,9 @@ class Petsync_Pet_Fields {
 			true
 		);
 
+		// The panel's labels are __() calls in the script itself.
+		wp_set_script_translations( self::HANDLE, 'shelterkit-pets' );
+
 		wp_localize_script( self::HANDLE, 'shelterPetsFields', $this->get_panel_config() );
 	}
 

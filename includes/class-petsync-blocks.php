@@ -348,7 +348,17 @@ class Petsync_Blocks {
 			}
 
 			// Register with render callback for server-side rendering.
-			register_block_type( $block_path );
+			$block_type = register_block_type( $block_path );
+
+			// Core loads translations for a block.json editor script only when
+			// its .asset.php lists wp-i18n, and with no build step there is no
+			// .asset.php. Without this, pet-details' editor strings would stay
+			// English however completely translate.wordpress.org translated them.
+			if ( $block_type ) {
+				foreach ( $block_type->editor_script_handles as $handle ) {
+					wp_set_script_translations( $handle, 'shelterkit-pets' );
+				}
+			}
 		}
 	}
 
@@ -466,6 +476,13 @@ class Petsync_Blocks {
 			PETSYNC_VERSION,
 			true
 		);
+
+		// A script's __() strings load from the WordPress.org language packs
+		// only once its handle is tied to the text domain. Without this the
+		// editor stays in English however much of it has been translated.
+		foreach ( array( '-blocks-editor', '-slider-editor', '-listing-grid-editor' ) as $suffix ) {
+			wp_set_script_translations( self::NAMESPACE . $suffix, 'shelterkit-pets' );
+		}
 
 		// Editor styles.
 		wp_enqueue_style(
