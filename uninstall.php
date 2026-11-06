@@ -82,10 +82,15 @@ function petsync_uninstall_site(): bool {
 	}
 
 	// Pets. wp_delete_post() also removes post meta and term relationships.
+	//
+	// 'any' alone skips trashed pets and the auto-draft WordPress creates
+	// whenever someone opens Add New and leaves, so both are named. Core's own
+	// cron would empty them in time, but "delete all data" should not depend on
+	// that. Found by uninstalling on a clean install.
 	$pet_ids = get_posts(
 		array(
 			'post_type'      => 'vcps_pet',
-			'post_status'    => 'any',
+			'post_status'    => array( 'any', 'trash', 'auto-draft' ),
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
@@ -129,6 +134,10 @@ function petsync_uninstall_site(): bool {
 		}
 
 		unregister_taxonomy( $taxonomy );
+
+		// Core writes this for a taxonomy that declares a default term, as
+		// pet_status does, and nothing else removes it.
+		delete_option( 'default_term_' . $taxonomy );
 	}
 
 	// Site Editor customizations of plugin templates, saved under this
@@ -148,7 +157,7 @@ function petsync_uninstall_site(): bool {
 	$template_ids = get_posts(
 		array(
 			'post_type'      => array( 'wp_template', 'wp_template_part' ),
-			'post_status'    => 'any',
+			'post_status'    => array( 'any', 'trash' ),
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
