@@ -21,24 +21,29 @@
  *                     attribute_terms key is a declared entity field.
  *   6. interactivity (heuristic) — actions.X / callbacks.X referenced in
  *                     block render.php are defined in a view.js / store.
+ *   7. hash-coverage — every literal $data['key'] the sync reads is in
+ *                     get_consumed_api_keys(), so the change-detection hash
+ *                     can't silently miss a field (stale-display risk).
+ *   8. versions      — the plugin header, PETSYNC_VERSION, readme.txt's
+ *                     Stable tag, package.json and every block.json agree.
+ *   9. screenshots   — readme captions pair with the screenshot-N files in
+ *                     .wordpress-org/ (a warning until the files exist).
+ *  10. uninstall-namespaces — uninstall.php knows every wp_theme name the
+ *                     plugin has filed Site Editor customizations under.
  *  11. api-shapes    — the provider response paths Pet_Hydrator resolves are
  *                     declared and well-formed.
- *  12. wp-tested    — readme.txt's "Requires at least" and "Tested up to"
+ *  12. wp-tested     — readme.txt's "Requires at least" and "Tested up to"
  *                     match the floor and ceiling of the CI matrix, so both
  *                     claims are backed by a suite that actually ran.
+ *  13. block-controls — attributes and their controls agree in BOTH
+ *                     directions: every attribute the server honours can be
+ *                     set in the editor, and every control the editor offers
+ *                     is read by something.
  *  14. post-types    — postType comparisons in editor scripts name a post
  *                     type that actually exists.
  *  15. svg-directives — no Interactivity directive sits on or inside an
  *                     <svg>, which the server-side processor refuses with a
  *                     notice on every render.
- *
- *  13. block-controls — attributes and their controls agree in BOTH
- *                     directions: every attribute the server honours can be
- *                     set in the editor, and every control the editor offers
- *                     is read by something.
- *   7. hash-coverage — every literal $data['key'] the sync reads is in
- *                     get_consumed_api_keys(), so the change-detection hash
- *                     can't silently miss a field (stale-display risk).
  *
  * Usage:
  *   php bin/validate-config.php [--format=human|json]

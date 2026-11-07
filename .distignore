@@ -40,6 +40,10 @@ bin
 migration-scripts
 README.md
 CHANGELOG.md
+# Contributor and maintainer documentation. Nothing here is for a site.
+/CONTRIBUTING.md
+/RELEASING.md
+/SECURITY.md
 
 # Draft screenshot captures. Untracked working files from the WP.org listing
 # work — 11MB of them reached a build before this line existed.
