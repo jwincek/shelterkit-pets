@@ -20,15 +20,15 @@ abstract class PetTestCase extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 
-		// WP_UnitTestCase::set_up() calls reset_post_types(), which
-		// _unregister_post_type()s every non-core type — and
-		// unregister_post_type() drops that type's registered meta with it
-		// (see wp-includes/post.php, unregister_meta_key). `init` does not
-		// fire again, so without re-registering here the post type and all
-		// its meta vanish after the first test, taking the sanitize callbacks
-		// and REST schemas with them. The symptom is confusing: reads and
-		// writes still work, because get/update_post_meta do not require
-		// registration — only sanitisation silently stops happening.
+		// Insurance, not a reset the library forgets. WP_UnitTestCase resets
+		// post types and taxonomies only when WP_RUN_CORE_TESTS is set, which a
+		// plugin suite never does, so what the plugin registered at `init`
+		// normally survives every test. But a test that unregisters the post
+		// type takes its registered meta with it (unregister_post_type() calls
+		// unregister_meta_key()), and `init` does not fire again. Rebuilding
+		// here means one such test cannot leave the rest without sanitize
+		// callbacks and REST schemas, which fails confusingly: reads and writes
+		// still work, because get/update_post_meta do not require registration.
 		CPT_Registry::register_post_types();
 		CPT_Registry::register_taxonomies();
 		CPT_Registry::register_meta();
