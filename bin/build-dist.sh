@@ -118,6 +118,28 @@ else
 	echo "Warning: not a git work tree — skipping the untracked-file check." >&2
 fi
 
+# The two checks above share a blind spot: a TRACKED top-level file that nobody
+# added to the denylist passes both. ShelterKit Donations shipped its
+# CONTRIBUTING.md and assets-src/ to users exactly that way, each added to the
+# repository after its guard was written. So the top level of the build is an
+# allowlist, and a new entry there has to be a decision rather than an
+# oversight.
+ALLOWED_TOP=( "$SLUG.php" readme.txt uninstall.php LICENSE assets blocks config includes languages parts templates )
+UNEXPECTED=()
+while IFS= read -r -d '' entry; do
+	name="$(basename "$entry")"
+	allowed=0
+	for permitted in "${ALLOWED_TOP[@]}"; do
+		[[ "$name" == "$permitted" ]] && { allowed=1; break; }
+	done
+	(( allowed )) || UNEXPECTED+=("$name")
+done < <(find "$DEST" -mindepth 1 -maxdepth 1 -print0)
+if (( ${#UNEXPECTED[@]} )); then
+	echo "Error: not on the build's top-level allowlist: ${UNEXPECTED[*]}" >&2
+	echo "Add it to .distignore, or to ALLOWED_TOP in bin/build-dist.sh if it is meant to ship." >&2
+	exit 1
+fi
+
 # Likewise, a missing runtime file would ship a broken plugin.
 MISSING=()
 for f in "$SLUG.php" readme.txt uninstall.php LICENSE config includes blocks; do
