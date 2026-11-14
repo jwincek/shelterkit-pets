@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **A pet taxonomy link now opens the pet archive with that filter applied.**
+  Breed, color, status and the other pet terms, wherever they are linked (menus,
+  the Post Terms block, the admin's View link), go to the adoptable pets archive
+  filtered to that term. The old term pages, such as `/pet_breed/beagle/`,
+  redirect there permanently, and core sitemaps no longer list them. The
+  archive can now also be filtered by color, coat, status, hypoallergenic and
+  declawed from the URL.
 - **The pet taxonomies are named `vcps_pet_*`, matching the post type.**
   `pet_breed` is now `vcps_pet_breed`, and likewise for all nine. Terms and
   their assignments move over automatically on update. URLs and the REST API

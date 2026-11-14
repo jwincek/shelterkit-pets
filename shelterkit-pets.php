@@ -112,6 +112,9 @@ function petsync_init(): void {
 	// Config-driven CPT, taxonomy, and meta registration.
 	\Petsync\Core\CPT_Registry::init();
 
+	// Term pages and term links lead to the pet archive with that filter applied.
+	\Petsync\Core\Term_Links::init();
+
 	// Apply compatibility filters (?compat_goodWithDogs=1 etc.) to the pet
 	// archive / taxonomy main query. Compatibility data lives in the
 	// vcps_pet_attribute taxonomy — it is NOT stored as post meta (the sync

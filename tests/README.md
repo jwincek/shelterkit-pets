@@ -70,7 +70,7 @@ that prompted it.
 | Kennel cards and the shelter profile | `KennelCardsTest`, `CardWrappingTest`, `CardShelterDetailsTest`, `EditorPreviewTest`, `ShelterProfileTest`, `AnimalShelterSchemaTest` |
 | Editor scripts and controls | `PetHealthControlsTest`, `ScriptTranslationsTest`, `ScriptDependenciesTest` |
 | Install lifecycle | `MigrationsTest`, `TaxonomyRenameMigrationTest`, `UninstallTest` |
-| Taxonomy REST routes | `TaxonomyRestTest` |
+| Taxonomy pages, links and REST routes | `TermLinksTest`, `TaxonomyRestTest` |
 
 A few of the bugs behind them, as a sense of what the suite is for:
 

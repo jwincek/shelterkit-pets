@@ -1,5 +1,5 @@
 {
-  "_comment_rewrite": "Taxonomy names carry the post type's vcps_ prefix since migration 9; until then they were pet_*, a three-letter prefix any other pet plugin could also register. Two public surfaces keep the old names on purpose. rewrite.slug keeps them in URLs, so an indexed /pet_breed/beagle/ still resolves. rest_base keeps them in the REST API, /wp/v2/pet_breed and /wp/v2/vcps_pet?pet_breed=, so clients on other sites, such as a companion plugin reading this site's pets, keep working whichever site updates first.",
+  "_comment_rewrite": "Taxonomy names carry the post type's vcps_ prefix since migration 9; until then they were pet_*, a three-letter prefix any other pet plugin could also register. Two public surfaces keep the old names on purpose. rewrite.slug keeps them in URLs, so an indexed /pet_breed/beagle/ still resolves, and Term_Links then redirects it to the pet archive with that filter applied. rest_base keeps them in the REST API, /wp/v2/pet_breed and /wp/v2/vcps_pet?pet_breed=, so clients on other sites, such as a companion plugin reading this site's pets, keep working whichever site updates first.",
   "taxonomies": {
     "vcps_pet_status": {
       "post_types": [

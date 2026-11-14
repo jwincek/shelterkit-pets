@@ -168,6 +168,15 @@ the step runs again rather than being silently marked done. Never reuse a
 version number: an install already at that version will not run it again.
 `wp shelterkit-pets migrate --dry-run` shows what would run.
 
+### A taxonomy page is the archive with a filter
+
+Each pet taxonomy is public, so WordPress would give every term a page of its
+own. `Petsync\Core\Term_Links` makes a term's link the pet archive with the
+listing grid's filter for it (`filter_breed=beagle`, `compat_goodWithDogs=1`),
+redirects term pages there permanently, and keeps the taxonomies out of core's
+sitemaps. A new taxonomy needs a matching `filter_*` key in the grid's
+`render.php`, or its links land on the unfiltered archive.
+
 ### Presentation belongs in CSS, not in the kennel card's markup
 
 The kennel card ships as a template part. Once a shelter edits it in the Site
@@ -221,8 +230,9 @@ that can be reached to fix it up.
 - The `pet_favorites` and `pet_comparison` cookies, and the
   `petstablished_favorites` and `petstablished_comparison` localStorage keys
   that hold visitors' saved lists in their own browsers
-- URL parameters people bookmark and share: `compare` and the `compat_*`
-  filters
+- URL parameters people bookmark and share: `compare`, and the archive's
+  `filter_*` and `compat_*` filters. Every term link, menu item and taxonomy
+  page redirect points at them.
 - CSV export column headings. They land in spreadsheets no migration can
   reach, so if one must change, the importer has to accept the old heading
   forever.
