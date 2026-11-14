@@ -25,6 +25,10 @@ declare( strict_types = 1 );
 
 namespace Petsync\Core;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use WP_Query;
 
 class Query {
