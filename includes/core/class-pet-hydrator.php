@@ -252,6 +252,35 @@ class Pet_Hydrator {
 	}
 
 	/**
+	 * Hydrate a pet whatever its post status, for staff tools such as export.
+	 *
+	 * get() serves only published pets, because its callers render for the
+	 * public. An export, gated on the export capability, can include drafts.
+	 * Nothing here is cached: the cache is the one get() reads, and a draft
+	 * cached there would be served to the next public caller.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $profile Hydration profile.
+	 * @return array<string, mixed>|null Null for a missing, trashed or non-pet post.
+	 */
+	public static function get_any_status( int $post_id, string $profile = 'full' ): ?array {
+		$post = get_post( $post_id );
+		if ( ! $post || 'vcps_pet' !== $post->post_type || in_array( $post->post_status, array( 'trash', 'auto-draft', 'inherit' ), true ) ) {
+			return null;
+		}
+
+		if ( 'publish' === $post->post_status ) {
+			return self::get( $post_id, $profile );
+		}
+
+		update_postmeta_cache( array( $post_id ) );
+		update_object_term_cache( array( $post_id ), 'vcps_pet' );
+		self::prime_related_caches( array( $post_id ) );
+
+		return self::hydrate( $post, $profile );
+	}
+
+	/**
 	 * Hydrate a single WP_Post into an entity array.
 	 *
 	 * Assumes caches have been primed. Call hydrate_many() or get() instead

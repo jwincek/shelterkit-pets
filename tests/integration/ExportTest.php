@@ -196,14 +196,18 @@ final class ExportTest extends PetTestCase {
 		$this->assertSame( 'yes', $row['ok_with_dogs'] );
 	}
 
-	public function test_json_declares_whether_it_can_be_reimported(): void {
+	/**
+	 * Whether the columns are the portable ones a CSV import reads. The key
+	 * was "importable" until nothing turned out to import JSON.
+	 */
+	public function test_json_declares_whether_its_columns_are_portable(): void {
 		$id = $this->make_manual_pet();
 
 		$portable = json_decode( Exporter::to_json( array( $id ), Schema::PORTABLE ), true );
 		$full     = json_decode( Exporter::to_json( array( $id ), Schema::FULL ), true );
 
-		$this->assertTrue( $portable['importable'] );
-		$this->assertFalse( $full['importable'], 'a full export must not claim to be re-importable' );
+		$this->assertTrue( $portable['portable'] );
+		$this->assertFalse( $full['portable'], 'a full export carries computed columns no import reads' );
 		$this->assertSame( Schema::columns( Schema::PORTABLE ), $portable['columns'] );
 		$this->assertCount( 1, $portable['pets'] );
 	}

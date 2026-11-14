@@ -48,6 +48,10 @@ class CLI {
 	 * [--provider=<provider>]
 	 * : Provider slug, or `manual` for hand-entered pets.
 	 *
+	 * [--include-unpublished]
+	 * : Include drafts, pending and private pets. Each row keeps its
+	 * post_status, so a restore does not publish them.
+	 *
 	 * [--file=<path>]
 	 * : Write here instead of STDOUT.
 	 *
@@ -56,6 +60,7 @@ class CLI {
 	 *     wp shelterkit-pets export --file=pets.csv
 	 *     wp shelterkit-pets export --format=json --mode=full --status=available
 	 *     wp shelterkit-pets export --provider=manual --file=hand-entered.csv
+	 *     wp shelterkit-pets export --include-unpublished --file=backup.csv
 	 *
 	 * @param array<int, string>    $args       Positional args.
 	 * @param array<string, string> $assoc_args Flags.
@@ -67,9 +72,10 @@ class CLI {
 		$ids = Exporter::pet_ids(
 			array_filter(
 				array(
-					'status'   => $assoc_args['status'] ?? null,
-					'animal'   => $assoc_args['animal'] ?? null,
-					'provider' => $assoc_args['provider'] ?? null,
+					'status'      => $assoc_args['status'] ?? null,
+					'animal'      => $assoc_args['animal'] ?? null,
+					'provider'    => $assoc_args['provider'] ?? null,
+					'unpublished' => ! empty( $assoc_args['include-unpublished'] ),
 				)
 			)
 		);

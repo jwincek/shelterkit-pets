@@ -92,7 +92,7 @@ class Admin {
 						<td>
 							<select name="format" id="skx-format">
 								<option value="csv"><?php esc_html_e( 'CSV — opens in Excel or Google Sheets', 'shelterkit-pets' ); ?></option>
-								<option value="json"><?php esc_html_e( 'JSON — keeps photo lists intact', 'shelterkit-pets' ); ?></option>
+								<option value="json"><?php esc_html_e( 'JSON — keeps lists as lists, for other software. Import reads CSV.', 'shelterkit-pets' ); ?></option>
 							</select>
 						</td>
 					</tr>
@@ -116,6 +116,18 @@ class Admin {
 									<option value="<?php echo esc_attr( $term->slug ); ?>"><?php echo esc_html( $term->name ); ?></option>
 								<?php endforeach; ?>
 							</select>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Unpublished pets', 'shelterkit-pets' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="unpublished" value="1" />
+								<?php esc_html_e( 'Include drafts, pending and private pets', 'shelterkit-pets' ); ?>
+							</label>
+							<p class="description">
+								<?php esc_html_e( 'For a complete backup. Each row keeps its post_status, so importing the file into an empty site does not publish them.', 'shelterkit-pets' ); ?>
+							</p>
 						</td>
 					</tr>
 					<tr>
@@ -156,6 +168,8 @@ class Admin {
 				$filters[ $key ] = $value;
 			}
 		}
+
+		$filters['unpublished'] = ! empty( $_POST['unpublished'] );
 
 		$ids  = Exporter::pet_ids( $filters );
 		$body = 'json' === $format ? Exporter::to_json( $ids, $mode ) : Exporter::to_csv( $ids, $mode );

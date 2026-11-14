@@ -82,6 +82,12 @@ class CLI {
 		}
 
 		\WP_CLI::log( sprintf( 'Mapped %d columns.', count( $report['mapping'] ) ) );
+		if ( 'UTF-8' !== $report['encoding'] ) {
+			\WP_CLI::warning( sprintf( 'Read as %s and converted to UTF-8. If accented letters come out wrong, save the file as CSV UTF-8.', $report['encoding'] ) );
+		}
+		if ( ',' !== $report['delimiter'] ) {
+			\WP_CLI::log( sprintf( 'Columns are separated by "%s".', $report['delimiter'] ) );
+		}
 
 		foreach ( $report['unmapped'] as $header ) {
 			\WP_CLI::warning( sprintf( 'Column "%s" did not match any field and was ignored.', $header ) );
