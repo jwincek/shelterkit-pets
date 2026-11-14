@@ -107,6 +107,10 @@ class CLI {
 			}
 		}
 
+		if ( $report['photos'] > 0 && ! $commit ) {
+			\WP_CLI::log( sprintf( '%d photo(s) would be downloaded.', $report['photos'] ) );
+		}
+
 		$summary = sprintf(
 			'%d to create, %d to update, %d skipped, %d failed.',
 			$report['created'],
@@ -118,6 +122,15 @@ class CLI {
 		if ( ! $commit ) {
 			\WP_CLI::success( "Dry run: $summary Re-run with --commit to write." );
 			return;
+		}
+
+		// No request time limit here, so the photos are fetched now rather than
+		// left to WP-Cron.
+		if ( $report['photos'] > 0 ) {
+			\WP_CLI::log( sprintf( 'Downloading %d photo(s)...', $report['photos'] ) );
+			while ( Photo_Queue::process( 60 ) > 0 ) {
+				\WP_CLI::log( sprintf( '  %d pet(s) still waiting for photos.', Photo_Queue::pending() ) );
+			}
 		}
 
 		\WP_CLI::success( str_replace( array( 'to create', 'to update' ), array( 'created', 'updated' ), $summary ) );

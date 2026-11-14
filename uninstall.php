@@ -46,6 +46,7 @@ function petsync_uninstall_site(): bool {
 	// --- Ephemeral tier: always removed --------------------------------
 	wp_clear_scheduled_hook( 'petsync_scheduled_sync' );
 	wp_clear_scheduled_hook( 'petstablished_scheduled_sync' ); // legacy pre-1.0 hook name
+	wp_clear_scheduled_hook( 'petsync_import_photos' ); // photos an import has yet to download
 
 	// Every transient the plugin sets, by name. The SQL sweep below cannot see
 	// a site with a persistent object cache, where transients never reach the
@@ -206,6 +207,9 @@ function petsync_uninstall_site(): bool {
 	delete_option( 'petsync_last_sync_stats' );
 	delete_option( 'petsync_sync_log' );
 	delete_option( 'petsync_preview_pet_id' );
+	// The photos stay in the Media Library, as the setting says; only the note
+	// of where an imported photo was downloaded from goes.
+	delete_post_meta_by_key( '_pet_source_url' );
 	// Schema version — dropped only on the full-delete path, so that the
 	// preserve-by-default path keeps its stored data correctly versioned for
 	// a later reinstall.

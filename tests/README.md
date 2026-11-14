@@ -66,7 +66,7 @@ that prompted it.
 | What the public can read | `StaffOnlyFieldsTest`, `VisitorStateSecurityTest`, `ReadAbilitiesTest`, `AbilityStatusDefaultTest`, `AbilityOutputSchemaTest`, `McpExposureTest`, `BatchGetPetsTest`, `SharedComparisonTest`, `MetaSanitizersTest` |
 | Hydration and the data model | `HydratorPrecedenceTest`, `HydrationShapesTest`, `HydrationQueryCountTest`, `TristateTest` (unit), `AttributeTermsTest`, `DefaultStatusTest`, `BlockBindingAliasTest`, `CacheFlushTest` |
 | Providers and sync | `ProviderMapTest`, `ProviderScopingTest`, `ApiShapesTest`, `AdoptAPetProviderTest`, `RescueGroupsProviderTest`, `StalenessTest`, `SyncScheduleTest`, `SyncAttributeTermsTest`, `SyncPublishStateTest`, `PetVisibilityTest`, `SyncSpeciesTest`, `ImageBudgetTest` |
-| Import and export | `CsvImportTest`, `CsvRoundTripTest`, `ImportPreviewTest`, `SpreadsheetFormatsTest`, `ExportTest`, `ExportUnpublishedTest` |
+| Import and export | `CsvImportTest`, `CsvRoundTripTest`, `ImportPreviewTest`, `SpreadsheetFormatsTest`, `ImportPhotosTest`, `ExportTest`, `ExportUnpublishedTest` |
 | Kennel cards and the shelter profile | `KennelCardsTest`, `CardWrappingTest`, `CardShelterDetailsTest`, `EditorPreviewTest`, `ShelterProfileTest`, `AnimalShelterSchemaTest` |
 | Editor scripts and controls | `PetHealthControlsTest`, `ScriptTranslationsTest`, `ScriptDependenciesTest` |
 | Install lifecycle | `MigrationsTest`, `TaxonomyRenameMigrationTest`, `UninstallTest` |

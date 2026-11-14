@@ -94,11 +94,11 @@ If you already keep your animals in a spreadsheet, **Pets → Import** will take
 
 = I have a spreadsheet of animals. Can I upload it? =
 
-Yes. Save it as CSV ("CSV UTF-8" in Excel is best, but Excel's older CSV format and semicolon-separated files work too) and go to **Pets → Import**. Column headings are matched loosely, so "Good with dogs?" finds the right field and you do not have to rename anything; only a name column is required. You get a preview showing how each column will be read, which you can change, and exactly what will be added, changed or skipped. Nothing is written until you confirm, and what you confirm is the file you previewed.
+Yes. Save it as CSV ("CSV UTF-8" in Excel is best, but Excel's older CSV format and semicolon-separated files work too) and go to **Pets → Import**. Photos come in too: put each pet's photo address in an `image` column, and more in a `gallery` column separated by `|`; they download after the import, in the background. Column headings are matched loosely, so "Good with dogs?" finds the right field and you do not have to rename anything; only a name column is required. You get a preview showing how each column will be read, which you can change, and exactly what will be added, changed or skipped. Nothing is written until you confirm, and what you confirm is the file you previewed.
 
 Re-uploading a corrected sheet updates the animals already on the site rather than duplicating them, matching on microchip number or, in a file exported from this site, on each pet's id. Imported pets count as hand-entered, so a later sync from a connected platform will never overwrite or unpublish them. A pet synced from a platform is never changed by an import; edit it on the platform.
 
-**Pets → Export** produces a file in the same format, so an export can be edited in a spreadsheet and imported straight back. Descriptions come out as plain paragraphs, and a pet's several breeds or colours are separated by `|`. To keep a complete backup, include unpublished pets: each keeps its post status, so importing the file into an empty site does not publish drafts. Photos are not part of the file yet.
+**Pets → Export** produces a file in the same format, so an export can be edited in a spreadsheet and imported straight back. Descriptions come out as plain paragraphs, and a pet's several breeds or colours are separated by `|`. To keep a complete backup, include unpublished pets: each keeps its post status, so importing the file into an empty site does not publish drafts. Each pet's main photo travels as its address in an `image` column.
 
 = Can I mix pets from a platform, a spreadsheet and the editor? =
 

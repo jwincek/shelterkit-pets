@@ -402,6 +402,22 @@ class Admin {
 					<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=vcps_pet' ) ); ?>"><?php esc_html_e( 'View pets', 'shelterkit-pets' ); ?></a>
 				<?php endif; ?>
 			</p>
+			<?php if ( ! empty( $report['photos'] ) ) : ?>
+				<p>
+					<?php
+					echo esc_html(
+						sprintf(
+							$committed
+								/* translators: %d: number of photos. */
+								? _n( '%d photo is downloading in the background, and appears on its pet when it arrives.', '%d photos are downloading in the background, a few at a time. They appear on the pets as they arrive.', (int) $report['photos'], 'shelterkit-pets' )
+								/* translators: %d: number of photos. */
+								: _n( '%d photo will be downloaded after the import, in the background.', '%d photos will be downloaded after the import, a few at a time in the background.', (int) $report['photos'], 'shelterkit-pets' ),
+							(int) $report['photos']
+						)
+					);
+					?>
+				</p>
+			<?php endif; ?>
 			<?php if ( 'UTF-8' !== ( $report['encoding'] ?? 'UTF-8' ) ) : ?>
 				<p><?php esc_html_e( 'This file was saved in Excel\'s older "CSV" format (Windows-1252) and was converted. If accented letters look wrong in the examples, save it as "CSV UTF-8" and upload it again.', 'shelterkit-pets' ); ?></p>
 			<?php endif; ?>

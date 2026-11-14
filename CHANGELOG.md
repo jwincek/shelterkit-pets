@@ -86,6 +86,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   appeared. Pets → Sync Settings now has "Species to sync": empty syncs every
   species. A site that was already syncing keeps cats and dogs until someone
   clears or changes it; a new site syncs everything.
+- **An import can bring photos.** An `image` column (one URL) sets a pet's
+  main photo and a `gallery` column (URLs separated by `|`) its gallery,
+  named as the pet model names them; "Photo" and "Photos" work too. The
+  photos are downloaded after the import, a few at a time in the
+  background, within the same size budget as synced photos; WP-CLI imports
+  download them at once. A photo already in the Media Library, as in a
+  same-site export, is used where it is, and one downloaded before is not
+  downloaded again. Each address must be a public http(s) link to an image
+  file, which the preview checks. The portable export now carries each
+  pet's main photo, so a restore brings the pictures back.
 
 ### Fixed
 - Saving Pets → Sync Settings reset the staleness settings, which have no
