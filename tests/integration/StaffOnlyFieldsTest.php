@@ -32,8 +32,8 @@ final class StaffOnlyFieldsTest extends PetTestCase {
 		parent::set_up();
 
 		$this->pet = $this->make_manual_pet( array( 'post_title' => 'Chipped' ) );
-		wp_set_object_terms( $this->pet, 'Dog', 'pet_animal' );
-		wp_set_object_terms( $this->pet, 'available', 'pet_status' );
+		wp_set_object_terms( $this->pet, 'Dog', 'vcps_pet_animal' );
+		wp_set_object_terms( $this->pet, 'available', 'vcps_pet_status' );
 		update_post_meta( $this->pet, $this->prefix . 'microchip_id', self::CHIP );
 		update_post_meta( $this->pet, $this->prefix . 'ps_id', '777' );
 	}

@@ -246,6 +246,9 @@ class Petsync_Kennel_Cards {
 	 * Pet picker.
 	 */
 	private function render_selection(): void {
+		// A form field named after the taxonomy's old name, not the taxonomy. Kept
+		// as pet_status so bookmarked screens still work, and so WordPress does not
+		// read it as the vcps_pet_status query var on this admin request.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only filter on a read-only screen.
 		$status = isset( $_GET['pet_status'] ) ? sanitize_key( wp_unslash( $_GET['pet_status'] ) ) : 'available';
 
@@ -550,7 +553,7 @@ class Petsync_Kennel_Cards {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- an admin screen filtering by status.
 			$args['tax_query'] = array(
 				array(
-					'taxonomy' => 'pet_status',
+					'taxonomy' => 'vcps_pet_status',
 					'field'    => 'slug',
 					'terms'    => array( $status ),
 				),
@@ -570,7 +573,7 @@ class Petsync_Kennel_Cards {
 
 		$terms = get_terms(
 			array(
-				'taxonomy'   => 'pet_status',
+				'taxonomy'   => 'vcps_pet_status',
 				'hide_empty' => true,
 			)
 		);

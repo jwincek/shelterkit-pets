@@ -74,14 +74,14 @@
     }
   },
   "taxonomies": {
-    "status": "pet_status",
-    "animal": "pet_animal",
-    "primary_breed": "pet_breed",
-    "age": "pet_age",
-    "sex": "pet_sex",
-    "size": "pet_size",
-    "primary_color": "pet_color",
-    "coat_length": "pet_coat"
+    "status": "vcps_pet_status",
+    "animal": "vcps_pet_animal",
+    "primary_breed": "vcps_pet_breed",
+    "age": "vcps_pet_age",
+    "sex": "vcps_pet_sex",
+    "size": "vcps_pet_size",
+    "primary_color": "vcps_pet_color",
+    "coat_length": "vcps_pet_coat"
   },
   "shapes": {
     "images": {
@@ -110,8 +110,8 @@
     "private_when": "dont_show_in_public_search"
   },
   "appends": {
-    "secondary_breed": "pet_breed",
-    "secondary_color": "pet_color"
+    "secondary_breed": "vcps_pet_breed",
+    "secondary_color": "vcps_pet_color"
   },
   "identity": "id"
 }

@@ -447,7 +447,7 @@ class Importer {
 		// Attribute terms are derived from the hydrated entity, so they have to
 		// be recomputed after the meta above lands. The editor path gets this
 		// from wp_after_insert_post; an import writes meta afterwards, so it
-		// must ask explicitly or imported pets get no pet_attribute terms and
+		// must ask explicitly or imported pets get no vcps_pet_attribute terms and
 		// silently vanish from compatibility filtering.
 		Pet_Hydrator::flush_cache();
 		\Petsync\Core\CPT_Registry::sync_attribute_terms( $post_id );

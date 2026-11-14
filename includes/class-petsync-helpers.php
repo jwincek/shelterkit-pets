@@ -18,14 +18,14 @@ class Petsync_Helpers {
 
 	/** Taxonomy mapping. */
 	public const TAXONOMIES = array(
-		'status' => 'pet_status',
-		'animal' => 'pet_animal',
-		'breed'  => 'pet_breed',
-		'age'    => 'pet_age',
-		'sex'    => 'pet_sex',
-		'size'   => 'pet_size',
-		'color'  => 'pet_color',
-		'coat'   => 'pet_coat',
+		'status' => 'vcps_pet_status',
+		'animal' => 'vcps_pet_animal',
+		'breed'  => 'vcps_pet_breed',
+		'age'    => 'vcps_pet_age',
+		'sex'    => 'vcps_pet_sex',
+		'size'   => 'vcps_pet_size',
+		'color'  => 'vcps_pet_color',
+		'coat'   => 'vcps_pet_coat',
 	);
 
 	/** Registered meta fields (only essential sync keys). */

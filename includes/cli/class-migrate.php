@@ -39,8 +39,9 @@ class Migrate {
 		4 => 'Consolidate wp_theme template namespaces onto the current one',
 		5 => 'The same again, for the shelterkit-pets rename',
 		6 => 'Apply entity field renames to stored post meta',
-		7 => 'Backfill pet_attribute terms for every pet (touches all pets)',
+		7 => 'Backfill vcps_pet_attribute terms for every pet (touches all pets)',
 		8 => 'Seed _pet_last_seen so staleness has a baseline (touches all pets)',
+		9 => 'Give the pet taxonomies the vcps_ prefix (keeps their URLs)',
 	);
 
 	/**

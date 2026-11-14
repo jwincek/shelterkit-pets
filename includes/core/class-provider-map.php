@@ -121,8 +121,8 @@ class Provider_Map {
 	 *
 	 * An entry is either a bare slug or an object carrying a value map:
 	 *
-	 *     "primary_breed": "pet_breed"
-	 *     "sex": { "to": "pet_sex", "values": { "f": "Female", "m": "Male" } }
+	 *     "primary_breed": "vcps_pet_breed"
+	 *     "sex": { "to": "vcps_pet_sex", "values": { "f": "Female", "m": "Male" } }
 	 *
 	 * Both forms normalise to the same thing here, so callers that only want to
 	 * know where a key lands need no special case.
@@ -146,7 +146,7 @@ class Provider_Map {
 	 * The value map for one field or taxonomy source, if it declares one.
 	 *
 	 * Renaming a field is not enough for every provider. Adopt-a-Pet sends sex
-	 * as 'f' / 'm', and the pet_sex taxonomy holds Female / Male — a difference
+	 * as 'f' / 'm', and the vcps_pet_sex taxonomy holds Female / Male — a difference
 	 * an `api_key` cannot express. Putting the translation in config rather than
 	 * reaching for a PHP callback is deliberate: "config could not express it"
 	 * is exactly how the ten hardcoded provider keys in #33 got written.

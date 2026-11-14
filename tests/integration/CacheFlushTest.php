@@ -111,7 +111,7 @@ final class CacheFlushTest extends PetTestCase {
 		update_post_meta( $pet, $this->prefix . 'weight', '10 lb' );
 
 		// Creating a pet hydrates it: wp_after_insert_post derives the
-		// pet_attribute terms from the entity (#49), which warms the cache
+		// vcps_pet_attribute terms from the entity (#49), which warms the cache
 		// before this meta was written. Start from a known-cold cache.
 		Pet_Hydrator::flush_cache();
 

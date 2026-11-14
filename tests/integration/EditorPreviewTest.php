@@ -42,7 +42,7 @@ final class EditorPreviewTest extends PetTestCase {
 
 	private function make_available_pet( string $title ): int {
 		$id = $this->make_manual_pet( array( 'post_title' => $title ) );
-		wp_set_object_terms( $id, 'Available', 'pet_status' );
+		wp_set_object_terms( $id, 'Available', 'vcps_pet_status' );
 		return $id;
 	}
 
@@ -121,7 +121,7 @@ final class EditorPreviewTest extends PetTestCase {
 	 */
 	public function test_it_falls_back_to_any_published_pet_when_none_are_available(): void {
 		$pet = $this->make_manual_pet( array( 'post_title' => 'Only Pet' ) );
-		wp_set_object_terms( $pet, 'Adopted', 'pet_status' );
+		wp_set_object_terms( $pet, 'Adopted', 'vcps_pet_status' );
 
 		$this->assertSame( $pet, Editor_Preview::preview_pet()->ID );
 	}

@@ -154,8 +154,8 @@ final class HydrationShapesTest extends PetTestCase {
 	 */
 	public function test_the_taxonomy_slug_twins_survive_narrowing(): void {
 		$pet = $this->make_manual_pet();
-		wp_set_object_terms( $pet, 'Cat', 'pet_animal' );
-		wp_set_object_terms( $pet, 'Available', 'pet_status' );
+		wp_set_object_terms( $pet, 'Cat', 'vcps_pet_animal' );
+		wp_set_object_terms( $pet, 'Available', 'vcps_pet_status' );
 
 		foreach ( array( 'summary', 'grid' ) as $shape ) {
 			Pet_Hydrator::flush_cache();
@@ -176,7 +176,7 @@ final class HydrationShapesTest extends PetTestCase {
 	 */
 	public function test_every_computed_field_agrees_between_its_shape_and_full(): void {
 		[ $a ] = $this->make_bonded_pair();
-		wp_set_object_terms( $a, 'Dog', 'pet_animal' );
+		wp_set_object_terms( $a, 'Dog', 'vcps_pet_animal' );
 		update_post_meta( $a, $this->prefix . 'ok_with_dogs', 'yes' );
 		update_post_meta( $a, $this->prefix . 'has_special_needs', 'yes' );
 

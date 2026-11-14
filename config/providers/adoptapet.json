@@ -25,7 +25,7 @@
   },
   "taxonomies": {
     "species": {
-      "to": "pet_animal",
+      "to": "vcps_pet_animal",
       "values": {
         "dog": "Dog",
         "cat": "Cat",
@@ -38,20 +38,20 @@
       }
     },
     "sex": {
-      "to": "pet_sex",
+      "to": "vcps_pet_sex",
       "values": {
         "f": "Female",
         "m": "Male"
       }
     },
     "primary_breed": {
-      "to": "pet_breed"
+      "to": "vcps_pet_breed"
     },
     "age": {
-      "to": "pet_age"
+      "to": "vcps_pet_age"
     },
     "size": {
-      "to": "pet_size",
+      "to": "vcps_pet_size",
       "values": {
         "s": "Small",
         "m": "Medium",
@@ -60,10 +60,10 @@
       }
     },
     "color": {
-      "to": "pet_color"
+      "to": "vcps_pet_color"
     },
     "hair": {
-      "to": "pet_coat"
+      "to": "vcps_pet_coat"
     }
   },
   "shapes": {

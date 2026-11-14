@@ -205,15 +205,15 @@ final class CsvImportTest extends PetTestCase {
 		);
 		$this->assertNotEmpty( $pets );
 
-		$this->assertSame( array( 'Cat' ), wp_list_pluck( (array) get_the_terms( $pets[0]->ID, 'pet_animal' ), 'name' ) );
-		$this->assertSame( array( 'Domestic Shorthair' ), wp_list_pluck( (array) get_the_terms( $pets[0]->ID, 'pet_breed' ), 'name' ) );
+		$this->assertSame( array( 'Cat' ), wp_list_pluck( (array) get_the_terms( $pets[0]->ID, 'vcps_pet_animal' ), 'name' ) );
+		$this->assertSame( array( 'Domestic Shorthair' ), wp_list_pluck( (array) get_the_terms( $pets[0]->ID, 'vcps_pet_breed' ), 'name' ) );
 	}
 
 	/**
 	 * Attribute terms are derived from the hydrated entity, and the editor gets
 	 * them from wp_after_insert_post — which fires before an import has written
 	 * its meta. Without an explicit recompute, imported pets carry no
-	 * pet_attribute terms and vanish from compatibility filtering while looking
+	 * vcps_pet_attribute terms and vanish from compatibility filtering while looking
 	 * perfectly correct on their own page.
 	 */
 	public function test_imported_pets_get_their_attribute_terms(): void {
@@ -229,7 +229,7 @@ final class CsvImportTest extends PetTestCase {
 
 		$this->assertContains(
 			'good-with-dogs',
-			wp_list_pluck( (array) get_the_terms( $pets[0]->ID, 'pet_attribute' ), 'slug' ),
+			wp_list_pluck( (array) get_the_terms( $pets[0]->ID, 'vcps_pet_attribute' ), 'slug' ),
 			'without this the pet is invisible to compatibility filtering'
 		);
 	}
@@ -406,7 +406,7 @@ final class CsvImportTest extends PetTestCase {
 		update_post_meta( $pet, $this->prefix . 'microchip_id', '985141000999999' );
 		update_post_meta( $pet, $this->prefix . 'ok_with_cats', 'no' );
 		update_post_meta( $pet, $this->prefix . 'housebroken', 'unknown' );
-		wp_set_object_terms( $pet, 'Cat', 'pet_animal' );
+		wp_set_object_terms( $pet, 'Cat', 'vcps_pet_animal' );
 		Pet_Hydrator::flush_cache();
 
 		$csv = Exporter::to_csv( array( $pet ), Schema::PORTABLE );
@@ -430,7 +430,7 @@ final class CsvImportTest extends PetTestCase {
 		$this->assertSame( '11 lb', $after['weight'] );
 		$this->assertSame( 'no', $after['ok_with_cats'] );
 		$this->assertSame( 'unknown', $after['housebroken'], "'unknown' must survive the round trip as itself" );
-		$this->assertSame( array( 'Cat' ), wp_list_pluck( (array) get_the_terms( $pet, 'pet_animal' ), 'name' ) );
+		$this->assertSame( array( 'Cat' ), wp_list_pluck( (array) get_the_terms( $pet, 'vcps_pet_animal' ), 'name' ) );
 	}
 
 	/**

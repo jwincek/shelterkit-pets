@@ -72,6 +72,12 @@ $url_filters = array(
 	'age'    => sanitize_text_field( wp_unslash( $_GET['filter_age'] ?? '' ) ),
 	'sex'    => sanitize_text_field( wp_unslash( $_GET['filter_sex'] ?? '' ) ),
 	'size'   => sanitize_text_field( wp_unslash( $_GET['filter_size'] ?? '' ) ),
+	// No dropdown offers these three, but a term link does: every taxonomy
+	// page redirects here with its filter (see Term_Links), and the active
+	// chips below show it and let a visitor remove it.
+	'color'  => sanitize_text_field( wp_unslash( $_GET['filter_color'] ?? '' ) ),
+	'coat'   => sanitize_text_field( wp_unslash( $_GET['filter_coat'] ?? '' ) ),
+	'status' => sanitize_text_field( wp_unslash( $_GET['filter_status'] ?? '' ) ),
 );
 
 $url_compat = array(
@@ -82,6 +88,8 @@ $url_compat = array(
 	'spayedNeutered' => ! empty( $_GET['compat_spayedNeutered'] ),
 	'housebroken'    => ! empty( $_GET['compat_housebroken'] ),
 	'specialNeeds'   => ! empty( $_GET['compat_specialNeeds'] ),
+	'hypoallergenic' => ! empty( $_GET['compat_hypoallergenic'] ),
+	'declawed'       => ! empty( $_GET['compat_declawed'] ),
 );
 
 // === Fetch Data via Ability ===
@@ -154,7 +162,7 @@ if ( $ability ) {
 		'order'          => $fallback_order,
 		'tax_query'      => array(
 			array(
-				'taxonomy' => 'pet_status',
+				'taxonomy' => 'vcps_pet_status',
 				'field'    => 'slug',
 				'terms'    => array( 'available' ),
 			),
@@ -715,6 +723,9 @@ $filter_config = array(
 		'age'    => __( 'Age', 'shelterkit-pets' ),
 		'sex'    => __( 'Sex', 'shelterkit-pets' ),
 		'size'   => __( 'Size', 'shelterkit-pets' ),
+		'color'  => __( 'Color', 'shelterkit-pets' ),
+		'coat'   => __( 'Coat', 'shelterkit-pets' ),
+		'status' => __( 'Status', 'shelterkit-pets' ),
 	);
 	foreach ( $url_filters as $key => $value ) {
 		if ( $value ) {
@@ -735,6 +746,8 @@ $filter_config = array(
 		'spayedNeutered' => __( 'Spayed/Neutered', 'shelterkit-pets' ),
 		'housebroken'    => __( 'Housebroken', 'shelterkit-pets' ),
 		'specialNeeds'   => __( 'Special needs', 'shelterkit-pets' ),
+		'hypoallergenic' => __( 'Hypoallergenic', 'shelterkit-pets' ),
+		'declawed'       => __( 'Declawed', 'shelterkit-pets' ),
 	);
 	foreach ( $url_compat as $key => $active ) {
 		if ( $active ) {

@@ -6,35 +6,35 @@
       "meta_prefix": "_pet_",
       "taxonomies": {
         "status": {
-          "taxonomy": "pet_status",
+          "taxonomy": "vcps_pet_status",
           "show_in_summary": true
         },
         "animal": {
-          "taxonomy": "pet_animal",
+          "taxonomy": "vcps_pet_animal",
           "show_in_summary": true
         },
         "breed": {
-          "taxonomy": "pet_breed",
+          "taxonomy": "vcps_pet_breed",
           "show_in_summary": true
         },
         "age": {
-          "taxonomy": "pet_age",
+          "taxonomy": "vcps_pet_age",
           "show_in_summary": true
         },
         "sex": {
-          "taxonomy": "pet_sex",
+          "taxonomy": "vcps_pet_sex",
           "show_in_summary": true
         },
         "size": {
-          "taxonomy": "pet_size",
+          "taxonomy": "vcps_pet_size",
           "show_in_summary": true
         },
         "color": {
-          "taxonomy": "pet_color",
+          "taxonomy": "vcps_pet_color",
           "show_in_summary": false
         },
         "coat": {
-          "taxonomy": "pet_coat",
+          "taxonomy": "vcps_pet_coat",
           "show_in_summary": false
         }
       },
@@ -312,8 +312,8 @@
           "label": "Apartment suitable"
         }
       },
-      "_comment_taxonomy_source_map": "Single-value taxonomy mappings: provider API key -> taxonomy. Sibling of attribute_map below (which maps boolean API keys -> pet_attribute term slugs). Both are consumed by the sync when writing terms, and both feed the change-detection hash via get_consumed_api_keys().",
-      "attribute_taxonomy": "pet_attribute",
+      "_comment_taxonomy_source_map": "Single-value taxonomy mappings: provider API key -> taxonomy. Sibling of attribute_map below (which maps boolean API keys -> vcps_pet_attribute term slugs). Both are consumed by the sync when writing terms, and both feed the change-detection hash via get_consumed_api_keys().",
+      "attribute_taxonomy": "vcps_pet_attribute",
       "computed": {
         "image": {
           "args": [
@@ -499,7 +499,7 @@
       "staff_only_fields": [
         "microchip_id"
       ],
-      "_comment_attribute_terms":"Canonical field -> pet_attribute term slug. Applied AFTER hydration, against the resolved tristate, so the term and the field can never disagree. Replaced attribute_map, which was keyed on provider field names and read raw API data — a second derivation that silently dropped non-string values and never ran at all for hand-entered pets.",
+      "_comment_attribute_terms":"Canonical field -> vcps_pet_attribute term slug. Applied AFTER hydration, against the resolved tristate, so the term and the field can never disagree. Replaced attribute_map, which was keyed on provider field names and read raw API data — a second derivation that silently dropped non-string values and never ran at all for hand-entered pets.",
       "attribute_terms": {
         "ok_with_dogs": "good-with-dogs",
         "ok_with_cats": "good-with-cats",
