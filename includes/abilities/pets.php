@@ -284,7 +284,10 @@ function get_filter_options( array $input = [] ): array {
  */
 function build_base_query( array $input ): Query {
 	return Query::for( 'vcps_pet' )
-		->status( $input['status'] ?? null )
+		// The schemas' default, applied here because the Abilities API does
+		// not fill defaults in. `?? null` meant every status, so a caller that
+		// named none got adopted pets too. An empty string still asks for all.
+		->status( $input['status'] ?? 'available' )
 		->where( 'animal', $input['animal'] ?? null )
 		->where( 'breed', $input['breed'] ?? null )
 		->where( 'age', $input['age'] ?? null )

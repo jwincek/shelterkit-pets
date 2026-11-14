@@ -69,6 +69,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reads.
 
 ### Fixed
+- A synced pet drafted because it left Petstablished's listing stayed a draft
+  after it came back, if its details had not changed: the sync skipped it
+  before deciding whether it should be published.
+- The same skip left an unchanged pet's last-seen date alone, so a pet still
+  listed on Petstablished looked stale after a week. The staleness notice
+  counted it, and the optional auto-draft would have taken it off the site.
+- The `list-pets` and `filter-pets` abilities returned pets of every status
+  when no status was given, though their schemas say the default is
+  available. An empty string still lists every status.
 - A pet's compatibility terms ("Good with dogs" and the rest) were derived
   before the sync stored the data they come from. A newly synced pet got none,
   and kept none, since later syncs skip an unchanged pet, so it was missing from

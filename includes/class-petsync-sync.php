@@ -565,9 +565,17 @@ class Petsync_Sync {
 		);
 
 		if ( $post_id ) {
-			// Fast-path: compare hash to skip entirely if nothing changed.
+			// The provider lists this pet, whatever else happens below. The
+			// skip that follows used to return before this was recorded, so a
+			// listed pet whose data had not changed looked stale after a week.
+			$this->mark_seen( $post_id );
+
+			// Skip a pet whose data has not changed, but only if it is already
+			// published or drafted as this sync would leave it. A pet drafted
+			// for leaving the feed comes back with the same data, and the skip
+			// used to keep it a draft for good.
 			$stored_hash = get_post_meta( $post_id, '_pet_api_hash', true );
-			if ( $stored_hash === $api_hash ) {
+			if ( $stored_hash === $api_hash && get_post_status( $post_id ) === $post_data['post_status'] ) {
 				return 'unchanged';
 			}
 
@@ -751,9 +759,19 @@ class Petsync_Sync {
 			update_post_meta( $post_id, '_pet_provider', self::PROVIDER );
 		}
 
-		// Written whether or not the wider fetch completed: this records that
-		// the provider still knows about THIS pet, which is a different fact
-		// from whether the whole feed came back.
+		$this->mark_seen( $post_id );
+	}
+
+	/**
+	 * Record that the provider listed this pet in this sync.
+	 *
+	 * Written whether or not the wider fetch completed: this records that the
+	 * provider still knows about THIS pet, which is a different fact from
+	 * whether the whole feed came back. Staleness is measured from it.
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	private function mark_seen( int $post_id ): void {
 		update_post_meta( $post_id, '_pet_last_seen', (string) time() );
 	}
 

@@ -206,7 +206,7 @@
           "status": {
             "type": "string",
             "default": "available",
-            "description": "Filter by status slug."
+            "description": "Filter by status slug. Defaults to available; an empty string lists every status."
           },
           "color": {
             "type": "string",
@@ -309,7 +309,8 @@
         "properties": {
           "status": {
             "type": "string",
-            "default": "available"
+            "default": "available",
+            "description": "Filter by status slug. Defaults to available; an empty string lists every status."
           },
           "color": {
             "type": "string"
