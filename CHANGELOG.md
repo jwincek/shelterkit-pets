@@ -67,8 +67,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The JSON export says `"portable"` instead of `"importable"`.** Nothing
   imports JSON; the flag says whether its columns are the ones a CSV import
   reads.
+- **A synced pet is shown only if its status is one the site shows.**
+  Petstablished's feed is not filtered by status, so an adopted, returned or
+  euthanized pet got a public page offering an adoption application. Now only
+  Available, Adoption Pending and On Hold pets are published, and Pets → Sync
+  Settings can change the list. Other synced pets are kept as drafts, and the
+  pets list says why ("Adopted: not shown on this site", "No longer listed on
+  Petstablished since …", "Hidden on Petstablished"). Pets added by hand are
+  not affected.
+- **Only an available pet offers the adoption application.** A pending,
+  on-hold or adopted pet's page says it is not taking applications instead.
+- **Visitors can no longer list the statuses the site does not show** through
+  the REST API, which named every status, Euthanized included.
+- A synced pet drafted in WordPress is published again by the next sync, as
+  the pets list now says. To keep one off the site, hide it on Petstablished.
 
 ### Fixed
+- Saving Pets → Sync Settings reset the staleness settings, which have no
+  field on that screen, to their defaults.
 - A synced pet drafted because it left Petstablished's listing stayed a draft
   after it came back, if its details had not changed: the sync skipped it
   before deciding whether it should be published.

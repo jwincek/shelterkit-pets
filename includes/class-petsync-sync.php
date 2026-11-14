@@ -556,10 +556,19 @@ class Petsync_Sync {
 		$private_at = $post_keys['private_when'] ?? '';
 		$is_private = '' !== $private_at && ! empty( $data[ $private_at ] );
 
+		// Nor does a pet whose status the site does not show. The feed is not
+		// filtered by status, so an adopted, returned or euthanized pet used to
+		// get a public page offering an adoption application. See
+		// Pet_Visibility for which statuses are shown.
+		$status = $this->status_of( $data );
+		$reason = $is_private
+			? \Petsync\Core\Pet_Visibility::HIDDEN_UPSTREAM
+			: ( \Petsync\Core\Pet_Visibility::is_shown( $status ) ? '' : \Petsync\Core\Pet_Visibility::STATUS_NOT_SHOWN );
+
 		// Prepare post data.
 		$post_data = array(
 			'post_type'    => 'vcps_pet',
-			'post_status'  => $is_private ? 'draft' : 'publish',
+			'post_status'  => '' === $reason ? 'publish' : 'draft',
 			'post_title'   => sanitize_text_field( $data[ $post_keys['title'] ?? '' ] ?? 'Unnamed Pet' ),
 			'post_content' => wp_kses_post( $data[ $post_keys['content'] ?? '' ] ?? '' ),
 		);
@@ -569,6 +578,7 @@ class Petsync_Sync {
 			// skip that follows used to return before this was recorded, so a
 			// listed pet whose data had not changed looked stale after a week.
 			$this->mark_seen( $post_id );
+			\Petsync\Core\Pet_Visibility::record( $post_id, $reason );
 
 			// Skip a pet whose data has not changed, but only if it is already
 			// published or drafted as this sync would leave it. A pet drafted
@@ -595,12 +605,39 @@ class Petsync_Sync {
 			return 'errors';
 		}
 
+		\Petsync\Core\Pet_Visibility::record( $post_id, $reason );
+
 		$this->update_pet_meta( $post_id, $data );
 		$this->update_pet_taxonomies( $post_id, $data );
 		$this->maybe_set_featured_image( $post_id, $data );
 		$this->store_api_snapshot( $post_id, $data, $api_hash );
 		$this->update_attribute_terms( $post_id );
 		return 'created';
+	}
+
+	/**
+	 * The status a record gives its pet, as the provider names it, after the
+	 * provider's own value map. Empty if the provider sends none.
+	 *
+	 * @param array $data Raw API response for a single pet.
+	 */
+	private function status_of( array $data ): string {
+		$key = array_search(
+			\Petsync\Core\Pet_Visibility::taxonomy(),
+			\Petsync\Core\Provider_Map::taxonomies( self::PROVIDER ),
+			true
+		);
+
+		if ( false === $key || empty( $data[ $key ] ) ) {
+			return '';
+		}
+
+		return trim(
+			(string) \Petsync\Core\Provider_Map::apply_values(
+				\Petsync\Core\Provider_Map::values( self::PROVIDER, (string) $key ),
+				$data[ $key ]
+			)
+		);
 	}
 
 	/**
@@ -937,6 +974,7 @@ class Petsync_Sync {
 						'post_status' => 'draft',
 					)
 				);
+				\Petsync\Core\Pet_Visibility::record( $post_id, \Petsync\Core\Pet_Visibility::LEFT_FEED );
 				++$removed;
 			}
 		}
@@ -1020,6 +1058,7 @@ class Petsync_Sync {
 			);
 
 			if ( ! is_wp_error( $result ) ) {
+				\Petsync\Core\Pet_Visibility::record( $post_id, \Petsync\Core\Pet_Visibility::NOT_SEEN );
 				++$drafted;
 			}
 		}

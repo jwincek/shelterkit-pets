@@ -79,6 +79,7 @@ class Petsync_Admin {
 		add_settings_field( 'auto_sync', __( 'Auto Sync', 'shelterkit-pets' ), array( $this, 'render_auto_sync_field' ), self::PAGE_SLUG, 'sync_settings' );
 		add_settings_field( 'sync_interval', __( 'Sync Interval', 'shelterkit-pets' ), array( $this, 'render_sync_interval_field' ), self::PAGE_SLUG, 'sync_settings' );
 		add_settings_field( 'batch_size', __( 'Batch Size', 'shelterkit-pets' ), array( $this, 'render_batch_size_field' ), self::PAGE_SLUG, 'sync_settings' );
+		add_settings_field( 'public_statuses', __( 'Statuses shown on the site', 'shelterkit-pets' ), array( $this, 'render_public_statuses_field' ), self::PAGE_SLUG, 'sync_settings' );
 
 		// Uninstall Section.
 		add_settings_section(
@@ -107,6 +108,8 @@ class Petsync_Admin {
 			// remove_stale_pets(), and getting it wrong takes a live animal
 			// off the site.
 			'stale_draft_days'         => 0,
+			// Statuses whose synced pets are published. See Pet_Visibility.
+			'public_statuses'          => \Petsync\Core\Pet_Visibility::DEFAULT_PUBLIC_STATUSES,
 		);
 	}
 
@@ -149,6 +152,13 @@ class Petsync_Admin {
 		// here too.
 		$sanitized[ \Petsync\Schema\Animal_Shelter::SETTING ] = ! empty( $input[ \Petsync\Schema\Animal_Shelter::SETTING ] );
 
+		// Not on any screen, so they were dropped here like the toggle above,
+		// and every save of this screen reset them to their defaults.
+		$sanitized['stale_notice_days'] = absint( $input['stale_notice_days'] ?? self::get_defaults()['stale_notice_days'] );
+		$sanitized['stale_draft_days']  = absint( $input['stale_draft_days'] ?? self::get_defaults()['stale_draft_days'] );
+
+		$sanitized['public_statuses'] = self::sanitize_public_statuses( $input['public_statuses'] ?? self::get_defaults()['public_statuses'] );
+
 		// Reschedule cron if auto_sync, the interval, or whether there is a key
 		// at all changed. The last matters because nothing is scheduled without
 		// a key: auto_sync is on by default, so entering a key for the first
@@ -160,6 +170,60 @@ class Petsync_Admin {
 		}
 
 		return $sanitized;
+	}
+
+	/**
+	 * Keep only statuses the site has, and always the adoptable one: a list
+	 * without it would draft every available pet at the next sync.
+	 *
+	 * @param mixed $statuses Submitted slugs.
+	 * @return string[]
+	 */
+	private static function sanitize_public_statuses( $statuses ): array {
+		$taxonomy = \Petsync\Core\Pet_Visibility::taxonomy();
+		$kept     = array( \Petsync\Core\Pet_Visibility::adoptable_status() );
+
+		foreach ( (array) $statuses as $slug ) {
+			$slug = sanitize_key( (string) $slug );
+			if ( '' !== $slug && term_exists( $slug, $taxonomy ) && ! in_array( $slug, $kept, true ) ) {
+				$kept[] = $slug;
+			}
+		}
+
+		return $kept;
+	}
+
+	public function render_public_statuses_field(): void {
+		$chosen    = \Petsync\Core\Pet_Visibility::public_statuses();
+		$adoptable = \Petsync\Core\Pet_Visibility::adoptable_status();
+		$terms     = get_terms(
+			array(
+				'taxonomy'   => \Petsync\Core\Pet_Visibility::taxonomy(),
+				'hide_empty' => false,
+			)
+		);
+
+		echo '<fieldset>';
+		foreach ( is_array( $terms ) ? $terms : array() as $term ) {
+			$always = $term->slug === $adoptable;
+			printf(
+				'<label><input type="checkbox" name="%1$s[public_statuses][]" value="%2$s" %3$s %4$s> %5$s</label><br>',
+				esc_attr( self::OPTION_NAME ),
+				esc_attr( $term->slug ),
+				checked( in_array( $term->slug, $chosen, true ), true, false ),
+				disabled( $always, true, false ),
+				esc_html( $term->name )
+			);
+			if ( $always ) {
+				// A disabled box is not submitted; the sanitiser adds it anyway.
+				printf( '<input type="hidden" name="%1$s[public_statuses][]" value="%2$s">', esc_attr( self::OPTION_NAME ), esc_attr( $term->slug ) );
+			}
+		}
+		echo '</fieldset>';
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__( 'A synced pet with any other status is kept as a draft, and the pets list says why. Only available pets offer the adoption application. Pets you add yourself are not affected.', 'shelterkit-pets' )
+		);
 	}
 
 	/**
