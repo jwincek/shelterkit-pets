@@ -1,6 +1,6 @@
 <?php
 /**
- * pet_attribute terms are what the archive's compatibility filter queries.
+ * vcps_pet_attribute terms are what the archive's compatibility filter queries.
  *
  * The front end filters with a tax_query, not a meta_query, so a pet whose
  * field says "good with dogs" but which carries no `good-with-dogs` term is
@@ -28,10 +28,10 @@ final class AttributeTermsTest extends PetTestCase {
 
 	/**
 	 * @param int $id Pet ID.
-	 * @return string[] pet_attribute term slugs.
+	 * @return string[] vcps_pet_attribute term slugs.
 	 */
 	private function terms_of( int $id ): array {
-		$t = wp_get_object_terms( $id, 'pet_attribute', array( 'fields' => 'slugs' ) );
+		$t = wp_get_object_terms( $id, 'vcps_pet_attribute', array( 'fields' => 'slugs' ) );
 
 		return is_wp_error( $t ) ? array() : $t;
 	}

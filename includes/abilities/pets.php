@@ -23,7 +23,7 @@ use Petsync\Core\Query;
 use WP_Error;
 
 /**
- * Compatibility filter mapping: camelCase input key → pet_attribute term slug.
+ * Compatibility filter mapping: camelCase input key → vcps_pet_attribute term slug.
  */
 const COMPAT_MAP = [
 	'goodWithDogs'   => 'good-with-dogs',
@@ -357,11 +357,11 @@ function calculate_filter_counts( array $input, array $all_ids = [] ): array {
 		$counts[ $key ] = $term_counts;
 	}
 
-	// Attribute boolean counts — now using pet_attribute taxonomy terms.
+	// Attribute boolean counts — now using vcps_pet_attribute taxonomy terms.
 	// Count how many of the current result set have each attribute.
 	// Format as single-element arrays to match the taxonomy count structure.
 	if ( ! empty( $all_ids ) ) {
-		$attribute_taxonomy = 'pet_attribute';
+		$attribute_taxonomy = 'vcps_pet_attribute';
 		$attr_terms         = get_terms(
 			[
 				'taxonomy'   => $attribute_taxonomy,

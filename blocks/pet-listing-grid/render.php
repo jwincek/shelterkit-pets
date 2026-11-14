@@ -154,7 +154,7 @@ if ( $ability ) {
 		'order'          => $fallback_order,
 		'tax_query'      => array(
 			array(
-				'taxonomy' => 'pet_status',
+				'taxonomy' => 'vcps_pet_status',
 				'field'    => 'slug',
 				'terms'    => array( 'available' ),
 			),

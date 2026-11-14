@@ -180,7 +180,7 @@ class Editor_Preview {
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- one row, admin-side preview only.
 				'tax_query'      => array(
 					array(
-						'taxonomy' => 'pet_status',
+						'taxonomy' => 'vcps_pet_status',
 						'field'    => 'slug',
 						'terms'    => array( 'available' ),
 					),

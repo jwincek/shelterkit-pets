@@ -82,6 +82,7 @@ runtime:
     every editor control is read by something.
 14. Post-type comparisons in editor scripts name a real post type.
 15. No Interactivity directive sits on or inside an `<svg>`.
+16. `uninstall.php` deletes every taxonomy name, current and pre-migration-9.
 
 ### Plugin Check
 
@@ -196,8 +197,12 @@ browsers or in people's own scripts and spreadsheets. Renaming any of them
 breaks existing installs, and once the plugin is listed there is no install
 that can be reached to fix it up.
 
-- The post type `vcps_pet`, the nine `pet_*` taxonomies, and every `_pet_*`
-  post and user meta key
+- The post type `vcps_pet`, the nine `vcps_pet_*` taxonomies, and every
+  `_pet_*` post and user meta key. The taxonomies were `pet_*` until
+  migration 9, and keep those old names in two public places: as URL slugs,
+  so the `/pet_breed/beagle/` a search engine indexed still resolves, and as
+  REST bases, so `/wp/v2/pet_breed` and `/wp/v2/vcps_pet?pet_breed=` keep
+  working for clients on other sites.
 - The options `petsync_settings`, `petsync_last_sync`,
   `petsync_last_sync_stats`, `petsync_sync_log`, `petsync_db_version` and
   `petsync_preview_pet_id`; the shared `shelterkit_organization`; and the

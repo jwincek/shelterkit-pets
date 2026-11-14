@@ -67,8 +67,43 @@ final class MigrationsTest extends PetTestCase {
 	}
 
 	// ── Migration 3: default status backfill ─────────────────────────────────
+	//
+	// Migration 3 predates migration 9, so it works on the status taxonomy's old
+	// name, pet_status, which nothing registers any more. These tests seed data
+	// the way a site from before migration 3 has it: under that name.
+
+	private function register_legacy_status(): void {
+		if ( ! taxonomy_exists( 'pet_status' ) ) {
+			register_taxonomy( 'pet_status', 'vcps_pet' );
+		}
+	}
+
+	public function tear_down(): void {
+		if ( taxonomy_exists( 'pet_status' ) ) {
+			unregister_taxonomy( 'pet_status' );
+		}
+		parent::tear_down();
+	}
+
+	/**
+	 * The realistic case: nothing has registered pet_status. The migration has to
+	 * register it for its own run, and must not leave it registered.
+	 */
+	public function test_migration_3_registers_the_old_name_only_for_its_own_run(): void {
+		$this->register_legacy_status();
+		$id = $this->make_manual_pet();
+		wp_set_object_terms( $id, array(), 'pet_status' );
+		unregister_taxonomy( 'pet_status' );
+
+		petsync_migrate_3_default_status();
+
+		$this->assertFalse( taxonomy_exists( 'pet_status' ), 'the old name must not stay registered' );
+		$this->register_legacy_status();
+		$this->assertSame( array( 'available' ), wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'slugs' ) ) );
+	}
 
 	public function test_migration_3_gives_statusless_hand_entered_pets_a_status(): void {
+		$this->register_legacy_status();
 		$id = $this->make_manual_pet();
 		wp_set_object_terms( $id, array(), 'pet_status' );
 
@@ -81,6 +116,7 @@ final class MigrationsTest extends PetTestCase {
 	}
 
 	public function test_migration_3_never_relabels_a_pet_that_has_a_status(): void {
+		$this->register_legacy_status();
 		$id = $this->make_manual_pet();
 		wp_set_object_terms( $id, 'adopted', 'pet_status' );
 
@@ -98,6 +134,7 @@ final class MigrationsTest extends PetTestCase {
 	 * Guessing on its behalf could contradict the platform.
 	 */
 	public function test_migration_3_skips_imported_pets(): void {
+		$this->register_legacy_status();
 		$id = $this->make_synced_pet();
 		wp_set_object_terms( $id, array(), 'pet_status' );
 
@@ -107,6 +144,7 @@ final class MigrationsTest extends PetTestCase {
 	}
 
 	public function test_migration_3_is_idempotent(): void {
+		$this->register_legacy_status();
 		$id = $this->make_manual_pet();
 		wp_set_object_terms( $id, array(), 'pet_status' );
 

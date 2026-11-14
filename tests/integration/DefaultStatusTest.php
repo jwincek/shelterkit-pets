@@ -29,7 +29,7 @@ final class DefaultStatusTest extends PetTestCase {
 	 * @return string[] Status slugs.
 	 */
 	private function status_of( int $id ): array {
-		$terms = wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'slugs' ) );
+		$terms = wp_get_object_terms( $id, 'vcps_pet_status', array( 'fields' => 'slugs' ) );
 
 		return is_wp_error( $terms ) ? array() : $terms;
 	}
@@ -43,7 +43,7 @@ final class DefaultStatusTest extends PetTestCase {
 				'fields'      => 'ids',
 				'tax_query'   => array(
 					array(
-						'taxonomy' => 'pet_status',
+						'taxonomy' => 'vcps_pet_status',
 						'field'    => 'slug',
 						'terms'    => array( 'available' ),
 					),
@@ -55,7 +55,7 @@ final class DefaultStatusTest extends PetTestCase {
 	}
 
 	public function test_the_taxonomy_declares_a_default(): void {
-		$taxonomy = get_taxonomy( 'pet_status' );
+		$taxonomy = get_taxonomy( 'vcps_pet_status' );
 
 		$this->assertIsArray( $taxonomy->default_term );
 		$this->assertSame( 'available', $taxonomy->default_term['slug'] );
@@ -101,9 +101,9 @@ final class DefaultStatusTest extends PetTestCase {
 		$request = new WP_REST_Request( 'POST', '/wp/v2/vcps_pet' );
 		$request->set_body_params(
 			array(
-				'title'      => 'Empty Array Path',
-				'status'     => 'publish',
-				'pet_status' => array(),
+				'title'           => 'Empty Array Path',
+				'status'          => 'publish',
+				'vcps_pet_status' => array(),
 			)
 		);
 		$response = rest_do_request( $request );
@@ -125,7 +125,7 @@ final class DefaultStatusTest extends PetTestCase {
 				'post_status' => 'publish',
 			)
 		);
-		wp_set_object_terms( $id, 'adopted', 'pet_status' );
+		wp_set_object_terms( $id, 'adopted', 'vcps_pet_status' );
 
 		$this->assertSame( array( 'adopted' ), $this->status_of( $id ) );
 		$this->assertFalse( $this->on_archive( $id ), 'an adopted pet must not appear on the archive' );
@@ -145,7 +145,7 @@ final class DefaultStatusTest extends PetTestCase {
 		);
 		$this->assertSame( array( 'available' ), $this->status_of( $id ) );
 
-		wp_set_object_terms( $id, array(), 'pet_status' );
+		wp_set_object_terms( $id, array(), 'vcps_pet_status' );
 		wp_update_post(
 			array(
 				'ID'         => $id,

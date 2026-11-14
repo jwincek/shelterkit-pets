@@ -42,8 +42,8 @@ final class ReadAbilitiesTest extends PetTestCase {
 	 */
 	private function make_listed_pet( string $animal = 'Dog', ?string $compat = null ): int {
 		$id = $this->make_manual_pet();
-		wp_set_object_terms( $id, $animal, 'pet_animal' );
-		wp_set_object_terms( $id, 'available', 'pet_status' );
+		wp_set_object_terms( $id, $animal, 'vcps_pet_animal' );
+		wp_set_object_terms( $id, 'available', 'vcps_pet_status' );
 
 		if ( $compat ) {
 			update_post_meta( $id, $this->prefix . $compat, 'yes' );
@@ -175,7 +175,7 @@ final class ReadAbilitiesTest extends PetTestCase {
 
 	/**
 	 * The integration nothing pinned until now: compatibility filtering is a
-	 * tax_query against pet_attribute, and #49 changed where those terms come
+	 * tax_query against vcps_pet_attribute, and #49 changed where those terms come
 	 * from. This asserts the ability and the term derivation still agree.
 	 */
 	public function test_filter_pets_finds_a_pet_by_compatibility(): void {

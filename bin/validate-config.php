@@ -44,6 +44,8 @@
  *  15. svg-directives — no Interactivity directive sits on or inside an
  *                     <svg>, which the server-side processor refuses with a
  *                     notice on every render.
+ *  16. uninstall-taxonomies — uninstall.php deletes every taxonomy name, the
+ *                     current ones and those before migration 9.
  *
  * Usage:
  *   php bin/validate-config.php [--format=human|json]
@@ -303,7 +305,7 @@ if ( $attr_tax && ! in_array( $attr_tax, $registered_tax, true ) ) {
 // An unregistered target means wp_set_object_terms() silently writes nothing.
 // A value map translates a provider's vocabulary into ours ('f' => 'Female').
 // A malformed one is silent: apply_values() simply matches nothing and the raw
-// provider value passes through, so 'f' becomes a pet_sex term called "f".
+// provider value passes through, so 'f' becomes a vcps_pet_sex term called "f".
 $check_values = static function ( $values, string $where ) use ( $add ): void {
 	if ( ! is_array( $values ) || [] === $values ) {
 		$add( 'error', 'providers', "$where declares an empty or non-array 'values' — it would translate nothing." );
@@ -1182,6 +1184,42 @@ foreach ( $markup_files as $markup_file ) {
 				$add( 'error', 'svg-directives', substr( $markup_file, strlen( $root ) + 1 ) . ":$line has an Interactivity directive inside an <svg>, which the server-side processor refuses with a notice on every render. Bind it on an HTML ancestor instead." );
 			}
 		}
+	}
+}
+
+// ── Check 16: uninstall knows every taxonomy name ───────────────────────────
+// uninstall.php cannot load the plugin, so it lists the taxonomies itself: the
+// current names from taxonomies.json, and the names before migration 9 from
+// petsync_taxonomy_renames(), for an install deleted before that migration ran.
+// A name missing there leaves its terms in the database on delete, and nothing
+// reports it. Same reasoning as check 10.
+$uninstall_src = $read( 'uninstall.php' );
+$main_src      = null !== $main_file ? (string) file_get_contents( $main_file ) : '';
+
+if ( '' !== $uninstall_src && '' !== $main_src ) {
+	$expected = array_keys( $taxonomies_json['taxonomies'] ?? [] );
+
+	if ( preg_match( '/function\s+petsync_taxonomy_renames\(\).*?return\s+array\((.*?)\);/s', $main_src, $rm ) ) {
+		preg_match_all( "/'([a-z_]+)'\s*=>/", $rm[1], $legacy );
+		$expected = array_merge( $expected, $legacy[1] );
+	} else {
+		$add( 'error', 'uninstall', 'petsync_taxonomy_renames() not found — check 16 cannot verify that uninstall covers the pre-9 taxonomy names.' );
+	}
+
+	$covered = [];
+	if ( preg_match( '/\$taxonomies\s*=\s*array\((.*?)\);/s', $uninstall_src, $um ) ) {
+		preg_match_all( "/'([a-z_]+)'/", $um[1], $un );
+		$covered = $un[1];
+	} else {
+		$add( 'error', 'uninstall', 'uninstall.php has no $taxonomies list — pet terms would be left behind on delete.' );
+	}
+
+	foreach ( array_diff( $expected, $covered ) as $missing ) {
+		$add( 'error', 'uninstall', "taxonomy '$missing' is not in uninstall.php's \$taxonomies list, so its terms would outlive the plugin." );
+	}
+
+	foreach ( array_diff( $covered, $expected ) as $extra ) {
+		$add( 'warning', 'uninstall', "uninstall.php deletes taxonomy '$extra', which neither taxonomies.json nor petsync_taxonomy_renames() declares." );
 	}
 }
 

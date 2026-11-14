@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **The pet taxonomies are named `vcps_pet_*`, matching the post type.**
+  `pet_breed` is now `vcps_pet_breed`, and likewise for all nine. Terms and
+  their assignments move over automatically on update. URLs and the REST API
+  keep the old names, so `/pet_breed/beagle/`, `/wp/v2/pet_breed` and
+  `/wp/v2/vcps_pet?pet_breed=` work as before. Code that names a taxonomy, in a
+  `tax_query` or a call such as `get_the_terms()`, needs the new name, and so
+  does a `?pet_breed=` query-string link, which only sites without pretty
+  permalinks used.
+
 ## [1.6.0] - 2026-11-06
 
 ### Security

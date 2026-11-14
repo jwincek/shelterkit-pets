@@ -96,7 +96,7 @@ class Query {
 	}
 
 	/**
-	 * Filter by pet_status taxonomy specifically.
+	 * Filter by vcps_pet_status taxonomy specifically.
 	 *
 	 * Convenience method since almost every query needs a status filter.
 	 */
@@ -108,7 +108,7 @@ class Query {
 	}
 
 	/**
-	 * Filter by a boolean attribute via the pet_attribute taxonomy.
+	 * Filter by a boolean attribute via the vcps_pet_attribute taxonomy.
 	 *
 	 * @param string $term_slug The attribute term slug (e.g. 'good-with-dogs').
 	 * @param mixed  $value     If truthy, add the filter. If falsy, skip.
@@ -119,7 +119,7 @@ class Query {
 		}
 
 		$entity_config = Config::get_item( 'entities', 'entities', [] );
-		$attribute_tax = $entity_config[ $this->post_type ]['attribute_taxonomy'] ?? 'pet_attribute';
+		$attribute_tax = $entity_config[ $this->post_type ]['attribute_taxonomy'] ?? 'vcps_pet_attribute';
 
 		$this->tax_query[] = [
 			'taxonomy' => $attribute_tax,
@@ -368,7 +368,7 @@ class Query {
 			$search_term = $this->search;
 
 			// Find breed term IDs matching the search.
-			$breed_taxonomy = $this->taxonomies['breed'] ?? 'pet_breed';
+			$breed_taxonomy = $this->taxonomies['breed'] ?? 'vcps_pet_breed';
 			$matching_terms = get_terms(
 				[
 					'taxonomy'   => $breed_taxonomy,

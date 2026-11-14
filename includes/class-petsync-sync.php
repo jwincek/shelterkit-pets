@@ -761,7 +761,7 @@ class Petsync_Sync {
 	 * Handles:
 	 * 1. Standard faceted taxonomies (animal, breed, age, etc.) for filtering.
 	 * 2. Secondary breed / secondary color as additional terms.
-	 * 3. Boolean attribute terms in pet_attribute taxonomy — replaces meta_query
+	 * 3. Boolean attribute terms in vcps_pet_attribute taxonomy — replaces meta_query
 	 *    filtering with much faster tax_query filtering.
 	 */
 	/**
@@ -784,7 +784,7 @@ class Petsync_Sync {
 			$value = $data[ $api_key ] ?? '';
 
 			// A provider's own vocabulary becomes a term name verbatim, so a
-			// platform sending 'f' would create a pet_sex term called "f". Its
+			// platform sending 'f' would create a vcps_pet_sex term called "f". Its
 			// map translates first.
 			$value = \Petsync\Core\Provider_Map::apply_values(
 				\Petsync\Core\Provider_Map::values( self::PROVIDER, $api_key ),
@@ -809,7 +809,7 @@ class Petsync_Sync {
 			}
 		}
 
-		// Boolean attributes → pet_attribute taxonomy terms. Derived from the
+		// Boolean attributes → vcps_pet_attribute taxonomy terms. Derived from the
 		// hydrated entity rather than from $data, so the term and the canonical
 		// field cannot disagree — see CPT_Registry::sync_attribute_terms().
 		\Petsync\Core\CPT_Registry::sync_attribute_terms( $post_id );

@@ -71,7 +71,7 @@ class Schema {
 		// taxonomies, not taxonomy_source_map: the map is keyed on the
 		// PROVIDER's field names and its values are taxonomy slugs, whereas the
 		// hydrated entity keys terms by the canonical name (status, animal, …).
-		// Exporting pet_status when the entity says status is the kind of thing
+		// Exporting vcps_pet_status when the entity says status is the kind of thing
 		// that only shows up as a column of empty cells.
 		$columns = array_merge(
 			self::IDENTITY,

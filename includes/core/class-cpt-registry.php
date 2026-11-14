@@ -75,12 +75,13 @@ class CPT_Registry {
 				'show_in_rest'      => $config['show_in_rest'] ?? true,
 				'hierarchical'      => $config['hierarchical'] ?? false,
 				'rewrite'           => $config['rewrite'] ?? [ 'slug' => $slug ],
+				'rest_base'         => $config['rest_base'] ?? $slug,
 				'show_admin_column' => $config['show_admin_column'] ?? false,
 			];
 
 			// A term WordPress assigns when a post is saved with none chosen.
 			//
-			// Without this a hand-created pet has no pet_status, and the
+			// Without this a hand-created pet has no vcps_pet_status, and the
 			// listing grid filters on `available` — so it renders correctly on
 			// its own page while being invisible on the archive. Pets imported
 			// from a provider never hit this, because the sync writes a status
@@ -357,7 +358,7 @@ class CPT_Registry {
 	}
 
 	/**
-	 * Derive the pet_attribute terms from the hydrated entity.
+	 * Derive the vcps_pet_attribute terms from the hydrated entity.
 	 *
 	 * These terms are what the archive's compatibility filter queries — the
 	 * front end uses a tax_query, not a meta_query — so a pet whose field says
@@ -390,7 +391,7 @@ class CPT_Registry {
 	}
 
 	/**
-	 * Apply the pet_attribute terms for one pet, replacing whatever is there.
+	 * Apply the vcps_pet_attribute terms for one pet, replacing whatever is there.
 	 *
 	 * Callable directly by the sync, which writes meta and then needs the terms
 	 * recomputed without waiting for a save hook.
@@ -400,7 +401,7 @@ class CPT_Registry {
 	public static function sync_attribute_terms( int $post_id ): void {
 		$config = Config::get_path( 'entities', 'entities.vcps_pet', [] );
 		$map    = $config['attribute_terms'] ?? [];
-		$tax    = $config['attribute_taxonomy'] ?? 'pet_attribute';
+		$tax    = $config['attribute_taxonomy'] ?? 'vcps_pet_attribute';
 
 		if ( ! $map || ! taxonomy_exists( $tax ) ) {
 			return;

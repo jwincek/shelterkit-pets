@@ -31,7 +31,7 @@ function get_adoption_stats( array $input = [] ): array {
 	$species_counts = [];
 	$animal_terms   = get_terms(
 		[
-			'taxonomy'   => 'pet_animal',
+			'taxonomy'   => 'vcps_pet_animal',
 			'hide_empty' => true,
 		]
 	);
@@ -40,7 +40,7 @@ function get_adoption_stats( array $input = [] ): array {
 
 	if ( ! is_wp_error( $animal_terms ) ) {
 		foreach ( $animal_terms as $term ) {
-			$count = count_pets_by_status_and_term( $status, 'pet_animal', $term->term_id );
+			$count = count_pets_by_status_and_term( $status, 'vcps_pet_animal', $term->term_id );
 			if ( $count > 0 ) {
 				$species_counts[ $term->name ] = $count;
 				$total_available              += $count;
@@ -66,7 +66,7 @@ function get_adoption_stats( array $input = [] ): array {
 			'order'          => 'DESC',
 			'tax_query'      => [
 				[
-					'taxonomy' => 'pet_status',
+					'taxonomy' => 'vcps_pet_status',
 					'field'    => 'slug',
 					'terms'    => $status,
 				],
@@ -116,7 +116,7 @@ function count_pets_by_status_and_term( string $status, string $taxonomy, int $t
 			'tax_query'      => [
 				'relation' => 'AND',
 				[
-					'taxonomy' => 'pet_status',
+					'taxonomy' => 'vcps_pet_status',
 					'field'    => 'slug',
 					'terms'    => $status,
 				],

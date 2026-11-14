@@ -173,8 +173,8 @@ final class ProviderMapTest extends PetTestCase {
 
 		$this->assertSame(
 			array(
-				'secondary_breed' => 'pet_breed',
-				'secondary_color' => 'pet_color',
+				'secondary_breed' => 'vcps_pet_breed',
+				'secondary_color' => 'vcps_pet_color',
 			),
 			Provider_Map::appends( \Petsync_Sync::PROVIDER )
 		);

@@ -33,12 +33,12 @@ final class UninstallTest extends PetTestCase {
 
 		$manual = $this->make_manual_pet();
 		$synced = $this->make_synced_pet();
-		wp_set_object_terms( $manual, 'Uninstall Beagle', 'pet_breed' );
+		wp_set_object_terms( $manual, 'Uninstall Beagle', 'vcps_pet_breed' );
 
 		// Statuses 'any' does not include. A clean-install uninstall left both.
 		$trashed   = $this->make_manual_pet( array( 'post_status' => 'trash' ) );
 		$abandoned = $this->make_manual_pet( array( 'post_status' => 'auto-draft' ) );
-		$this->assertNotFalse( get_option( 'default_term_pet_status' ), 'pet_status declares a default term, so core has written this' );
+		$this->assertNotFalse( get_option( 'default_term_vcps_pet_status' ), 'vcps_pet_status declares a default term, so core has written this' );
 
 		$photo = self::factory()->attachment->create_object(
 			'uninstall-photo.jpg',
@@ -62,16 +62,16 @@ final class UninstallTest extends PetTestCase {
 			$this->make_customised_part( 'petstablished-sync' ),
 		);
 
-		// Read while nothing is registered: re-registering pet_status afterwards
+		// Read while nothing is registered: re-registering vcps_pet_status afterwards
 		// makes core write its default-term option all over again.
-		$default_term = $this->run_uninstall( static fn() => get_option( 'default_term_pet_status' ) );
+		$default_term = $this->run_uninstall( static fn() => get_option( 'default_term_vcps_pet_status' ) );
 
 		$this->assertNull( get_post( $manual ), 'a hand-entered pet is deleted too' );
 		$this->assertNull( get_post( $synced ) );
 		$this->assertNull( get_post( $trashed ), 'a trashed pet is still a pet' );
 		$this->assertNull( get_post( $abandoned ), 'and so is the auto-draft Add New leaves behind' );
 		$this->assertFalse( $default_term, "core's default-term option outlived its taxonomy" );
-		$this->assertNull( term_exists( 'Uninstall Beagle', 'pet_breed' ), 'terms are deleted although the taxonomy was unregistered' );
+		$this->assertNull( term_exists( 'Uninstall Beagle', 'vcps_pet_breed' ), 'terms are deleted although the taxonomy was unregistered' );
 
 		$this->assertFalse( get_option( 'petsync_settings' ) );
 		$this->assertFalse( get_option( 'petsync_last_sync' ) );

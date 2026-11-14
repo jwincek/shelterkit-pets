@@ -28,7 +28,7 @@ final class PetHealthControlsTest extends PetTestCase {
 	 */
 	private function make_pet_with_health(): int {
 		$id = $this->make_manual_pet();
-		wp_set_object_terms( $id, 'Cat', 'pet_animal' );
+		wp_set_object_terms( $id, 'Cat', 'vcps_pet_animal' );
 
 		foreach ( array(
 			'spayed_neutered'   => 'yes',

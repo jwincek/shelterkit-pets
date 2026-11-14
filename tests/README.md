@@ -69,7 +69,8 @@ that prompted it.
 | Import and export | `CsvImportTest`, `ExportTest` |
 | Kennel cards and the shelter profile | `KennelCardsTest`, `CardWrappingTest`, `CardShelterDetailsTest`, `EditorPreviewTest`, `ShelterProfileTest`, `AnimalShelterSchemaTest` |
 | Editor scripts and controls | `PetHealthControlsTest`, `ScriptTranslationsTest`, `ScriptDependenciesTest` |
-| Install lifecycle | `MigrationsTest`, `UninstallTest` |
+| Install lifecycle | `MigrationsTest`, `TaxonomyRenameMigrationTest`, `UninstallTest` |
+| Taxonomy REST routes | `TaxonomyRestTest` |
 
 A few of the bugs behind them, as a sense of what the suite is for:
 

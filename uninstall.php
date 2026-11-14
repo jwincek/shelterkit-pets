@@ -104,7 +104,21 @@ function petsync_uninstall_site(): bool {
 	// Taxonomy terms. The plugin isn't loaded during uninstall, so its
 	// taxonomies are unregistered and get_terms()/wp_delete_term() would
 	// refuse them. Stub-register each one just for this request.
+	//
+	// The current names, then the names before migration 9. An install deleted
+	// before migration 9 ever ran still has its terms under the old ones. The
+	// list repeats petsync_taxonomy_renames(), which is unreachable here;
+	// validator check 16 keeps the two in step.
 	$taxonomies = array(
+		'vcps_pet_status',
+		'vcps_pet_animal',
+		'vcps_pet_breed',
+		'vcps_pet_age',
+		'vcps_pet_sex',
+		'vcps_pet_size',
+		'vcps_pet_color',
+		'vcps_pet_coat',
+		'vcps_pet_attribute',
 		'pet_status',
 		'pet_animal',
 		'pet_breed',
@@ -135,9 +149,11 @@ function petsync_uninstall_site(): bool {
 
 		unregister_taxonomy( $taxonomy );
 
-		// Core writes this for a taxonomy that declares a default term, as
-		// pet_status does, and nothing else removes it.
+		// Core writes these, and nothing else removes them: the default term of a
+		// taxonomy that declares one, as the status taxonomy does, and the
+		// hierarchy cache of one that was ever hierarchical, as pet_breed once was.
 		delete_option( 'default_term_' . $taxonomy );
+		delete_option( $taxonomy . '_children' );
 	}
 
 	// Site Editor customizations of plugin templates, saved under this

@@ -48,9 +48,9 @@ final class KennelCardsTest extends PetTestCase {
 				'primary_breed' => 'Mixed Breed',
 			)
 		);
-		wp_set_object_terms( $id, 'mixed-breed', 'pet_breed' );
-		wp_set_object_terms( $id, 'senior', 'pet_age' );
-		wp_set_object_terms( $id, 'male', 'pet_sex' );
+		wp_set_object_terms( $id, 'mixed-breed', 'vcps_pet_breed' );
+		wp_set_object_terms( $id, 'senior', 'vcps_pet_age' );
+		wp_set_object_terms( $id, 'male', 'vcps_pet_sex' );
 
 		$html = strtolower( $this->call( 'render_card', $id ) );
 
@@ -76,10 +76,10 @@ final class KennelCardsTest extends PetTestCase {
 				'is_ok_with_other_dogs' => 'Yes',
 			)
 		);
-		wp_set_object_terms( $id, 'dog', 'pet_animal' );
+		wp_set_object_terms( $id, 'dog', 'vcps_pet_animal' );
 		// The attribute rows read taxonomy terms, which the real sync writes
 		// separately from the snapshot.
-		wp_set_object_terms( $id, 'Pit Bull Terrier', 'pet_breed' );
+		wp_set_object_terms( $id, 'Pit Bull Terrier', 'vcps_pet_breed' );
 
 		$html = $this->call( 'render_card', $id );
 
@@ -94,7 +94,7 @@ final class KennelCardsTest extends PetTestCase {
 	public function test_a_hand_entered_pet_renders_too(): void {
 		$id = $this->make_manual_pet( array( 'post_title' => 'Clover' ) );
 		update_post_meta( $id, $this->prefix . 'spayed_neutered', 'yes' );
-		wp_set_object_terms( $id, 'beagle', 'pet_breed' );
+		wp_set_object_terms( $id, 'beagle', 'vcps_pet_breed' );
 
 		$html = $this->call( 'render_card', $id );
 
@@ -215,7 +215,7 @@ final class KennelCardsTest extends PetTestCase {
 	public function test_the_picker_defaults_to_available_pets(): void {
 		$available = $this->make_manual_pet( array( 'post_title' => 'Still Here' ) );
 		$adopted   = $this->make_manual_pet( array( 'post_title' => 'Went Home' ) );
-		wp_set_object_terms( $adopted, 'adopted', 'pet_status' );
+		wp_set_object_terms( $adopted, 'adopted', 'vcps_pet_status' );
 
 		$ids = wp_list_pluck( $this->call( 'get_printable_pets' ), 'ID' );
 
@@ -226,7 +226,7 @@ final class KennelCardsTest extends PetTestCase {
 	public function test_the_picker_can_be_filtered_to_another_status(): void {
 		$available = $this->make_manual_pet();
 		$adopted   = $this->make_manual_pet();
-		wp_set_object_terms( $adopted, 'adopted', 'pet_status' );
+		wp_set_object_terms( $adopted, 'adopted', 'vcps_pet_status' );
 
 		$ids = wp_list_pluck( $this->call( 'get_printable_pets', 'adopted' ), 'ID' );
 

@@ -34,27 +34,27 @@ $separator   = $attributes['separator'] ?? ' · ';
 $tagline_fields = array(
 	array(
 		'key'      => 'animal',
-		'taxonomy' => 'pet_animal',
+		'taxonomy' => 'vcps_pet_animal',
 		'filter'   => 'filter_animal',
 	),
 	array(
 		'key'      => 'breed',
-		'taxonomy' => 'pet_breed',
+		'taxonomy' => 'vcps_pet_breed',
 		'filter'   => 'filter_breed',
 	),
 	array(
 		'key'      => 'age',
-		'taxonomy' => 'pet_age',
+		'taxonomy' => 'vcps_pet_age',
 		'filter'   => 'filter_age',
 	),
 	array(
 		'key'      => 'sex',
-		'taxonomy' => 'pet_sex',
+		'taxonomy' => 'vcps_pet_sex',
 		'filter'   => 'filter_sex',
 	),
 	array(
 		'key'      => 'size',
-		'taxonomy' => 'pet_size',
+		'taxonomy' => 'vcps_pet_size',
 		'filter'   => 'filter_size',
 	),
 );

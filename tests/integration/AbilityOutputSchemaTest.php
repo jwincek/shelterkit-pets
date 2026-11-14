@@ -39,8 +39,8 @@ final class AbilityOutputSchemaTest extends PetTestCase {
 		// by never registering at all.
 
 		$this->pet = $this->make_manual_pet( array( 'post_title' => 'Schema Subject' ) );
-		wp_set_object_terms( $this->pet, 'Dog', 'pet_animal' );
-		wp_set_object_terms( $this->pet, 'available', 'pet_status' );
+		wp_set_object_terms( $this->pet, 'Dog', 'vcps_pet_animal' );
+		wp_set_object_terms( $this->pet, 'available', 'vcps_pet_status' );
 
 		// The one ability gated on edit_posts needs a user who has it; the rest
 		// are public and are unaffected by being logged in.

@@ -114,7 +114,7 @@ function petsync_init(): void {
 
 	// Apply compatibility filters (?compat_goodWithDogs=1 etc.) to the pet
 	// archive / taxonomy main query. Compatibility data lives in the
-	// pet_attribute taxonomy — it is NOT stored as post meta (the sync
+	// vcps_pet_attribute taxonomy — it is NOT stored as post meta (the sync
 	// keeps it in the _pet_api_response snapshot + attribute terms), so
 	// this must be a tax_query. Mirrors Query::whereAttribute() and the
 	// filter-pets ability so a no-JS request and the grid block agree.
@@ -132,7 +132,7 @@ function petsync_init(): void {
 				return;
 			}
 
-			// camelCase URL key (compat_<key>) => pet_attribute term slug.
+			// camelCase URL key (compat_<key>) => vcps_pet_attribute term slug.
 			// Mirrors \Petsync\Abilities\Pets\COMPAT_MAP and the grid block's URL params.
 			$compat_map    = [
 				'goodWithDogs'   => 'good-with-dogs',
@@ -145,7 +145,7 @@ function petsync_init(): void {
 				'hypoallergenic' => 'hypoallergenic',
 				'declawed'       => 'declawed',
 			];
-			$attribute_tax = $entities['vcps_pet']['attribute_taxonomy'] ?? 'pet_attribute';
+			$attribute_tax = $entities['vcps_pet']['attribute_taxonomy'] ?? 'vcps_pet_attribute';
 
 			$compat_clauses = [];
 			foreach ( $compat_map as $input_key => $term_slug ) {
@@ -347,7 +347,7 @@ add_action( 'plugins_loaded', 'petsync_init' );
  * plugin's DATA version and is deliberately independent of the release version
  * in the plugin header — most releases change no stored data at all.
  */
-define( 'PETSYNC_DB_VERSION', 8 );
+define( 'PETSYNC_DB_VERSION', 9 );
 
 /**
  * The ordered migration list.
@@ -375,6 +375,7 @@ function petsync_get_migrations(): array {
 		6 => 'petsync_migrate_6_field_renames',
 		7 => 'petsync_migrate_7_backfill_attribute_terms',
 		8 => 'petsync_migrate_8_seed_last_seen',
+		9 => 'petsync_migrate_9_taxonomy_prefix',
 	);
 }
 
@@ -590,7 +591,7 @@ function petsync_migrate_2_provider_meta(): void {
  */
 function petsync_migrate_3_default_status(): void {
 	$taxonomies = \Petsync\Core\Config::get_item( 'taxonomies', 'taxonomies', array() );
-	$default    = $taxonomies['pet_status']['default_term'] ?? null;
+	$default    = $taxonomies['vcps_pet_status']['default_term'] ?? null;
 
 	if ( ! $default ) {
 		return;
@@ -613,14 +614,31 @@ function petsync_migrate_3_default_status(): void {
 		)
 	);
 
-	foreach ( $pet_ids as $pet_id ) {
-		$existing = wp_get_object_terms( $pet_id, 'pet_status', array( 'fields' => 'ids' ) );
+	// Every migration before 9 runs on data still filed under the old taxonomy
+	// names, so this one works on pet_status as it always did. Nothing registers
+	// that name any more, so register it for this run only, flat, the way
+	// uninstall.php does. Using the new name here instead would give every pet
+	// "available" before migration 9 brought its real status across.
+	$legacy     = 'pet_status';
+	$registered = taxonomy_exists( $legacy );
+	if ( ! $registered ) {
+		register_taxonomy( $legacy, 'vcps_pet' );
+	}
 
-		if ( is_wp_error( $existing ) || ! empty( $existing ) ) {
-			continue;
+	try {
+		foreach ( $pet_ids as $pet_id ) {
+			$existing = wp_get_object_terms( $pet_id, $legacy, array( 'fields' => 'ids' ) );
+
+			if ( is_wp_error( $existing ) || ! empty( $existing ) ) {
+				continue;
+			}
+
+			wp_set_object_terms( $pet_id, $default, $legacy );
 		}
-
-		wp_set_object_terms( $pet_id, $default, 'pet_status' );
+	} finally {
+		if ( ! $registered ) {
+			unregister_taxonomy( $legacy );
+		}
 	}
 }
 
@@ -812,7 +830,7 @@ function petsync_migrate_6_field_renames(): bool {
 }
 
 /**
- * Migration 7 — backfill pet_attribute terms for pets that already exist.
+ * Migration 7 — backfill vcps_pet_attribute terms for pets that already exist.
  *
  * The terms are now derived from the hydrated entity on every save, but that
  * only helps pets saved after the change. A hand-entered pet whose
@@ -889,4 +907,187 @@ function petsync_migrate_8_seed_last_seen(): bool {
 	}
 
 	return true;
+}
+
+/**
+ * The taxonomy names before migration 9, and what each became.
+ *
+ * Migration 9 reads it; uninstall.php repeats the old names, because the plugin
+ * is not loaded during uninstall, and validator check 16 holds the two
+ * together.
+ *
+ * @return array<string, string> Old taxonomy name => new taxonomy name.
+ */
+function petsync_taxonomy_renames(): array {
+	return array(
+		'pet_status'    => 'vcps_pet_status',
+		'pet_animal'    => 'vcps_pet_animal',
+		'pet_breed'     => 'vcps_pet_breed',
+		'pet_age'       => 'vcps_pet_age',
+		'pet_sex'       => 'vcps_pet_sex',
+		'pet_size'      => 'vcps_pet_size',
+		'pet_color'     => 'vcps_pet_color',
+		'pet_coat'      => 'vcps_pet_coat',
+		'pet_attribute' => 'vcps_pet_attribute',
+	);
+}
+
+/**
+ * Migration 9 — give the taxonomies the post type's vcps_ prefix.
+ *
+ * pet_* was a three-letter dictionary-word prefix that another pet plugin could
+ * register too, and taxonomy names share one registry per site. Renaming before
+ * the plugin is listed is the cheap moment; afterwards every install's menus,
+ * templates and custom code would carry the old names.
+ *
+ * Raw SQL, because the old names are no longer registered and the term API
+ * refuses unregistered taxonomies. It runs at init 20, after registration at
+ * init 10 has already created the default and attribute terms under the new
+ * names on this very request, so it merges those into the old terms (which
+ * carry the pets) rather than renaming around them.
+ *
+ * Public names do not change: each taxonomy keeps its old name as its rewrite
+ * slug and as its REST base (see the note in config/taxonomies.json).
+ *
+ * @return bool False if the rename failed, so the rail retries it.
+ */
+function petsync_migrate_9_taxonomy_prefix(): bool {
+	global $wpdb;
+
+	$config = \Petsync\Core\Config::get_item( 'taxonomies', 'taxonomies', array() );
+	$merged = array();
+
+	foreach ( petsync_taxonomy_renames() as $old => $new ) {
+		// Terms the new taxonomy already holds under a slug the old one also has.
+		// Keep the old term, which carries the pets; move anything attached to the
+		// new one across first. INSERT IGNORE leaves one row where an object was
+		// already on both.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration across unregistered taxonomies.
+		$collisions = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT nt.term_taxonomy_id AS new_tt, nt.term_id AS new_term, ot.term_taxonomy_id AS old_tt
+				 FROM {$wpdb->term_taxonomy} nt
+				 JOIN {$wpdb->terms} n ON n.term_id = nt.term_id
+				 JOIN {$wpdb->terms} o ON o.slug = n.slug
+				 JOIN {$wpdb->term_taxonomy} ot ON ot.term_id = o.term_id AND ot.taxonomy = %s
+				 WHERE nt.taxonomy = %s",
+				$old,
+				$new
+			)
+		);
+
+		foreach ( $collisions as $collision ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
+			$wpdb->query(
+				$wpdb->prepare(
+					"INSERT IGNORE INTO {$wpdb->term_relationships} (object_id, term_taxonomy_id, term_order)
+					 SELECT object_id, %d, term_order FROM {$wpdb->term_relationships} WHERE term_taxonomy_id = %d",
+					$collision->old_tt,
+					$collision->new_tt
+				)
+			);
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
+			$wpdb->delete( $wpdb->term_relationships, array( 'term_taxonomy_id' => (int) $collision->new_tt ) );
+			$wpdb->delete( $wpdb->term_taxonomy, array( 'term_taxonomy_id' => (int) $collision->new_tt ) );
+			$wpdb->delete( $wpdb->termmeta, array( 'term_id' => (int) $collision->new_term ) );
+			$wpdb->delete( $wpdb->terms, array( 'term_id' => (int) $collision->new_term ) );
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			wp_cache_delete( (int) $collision->new_term, 'terms' );
+			$merged[ $new ][] = (int) $collision->old_tt;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
+		if ( false === $wpdb->update( $wpdb->term_taxonomy, array( 'taxonomy' => $new ), array( 'taxonomy' => $old ) ) ) {
+			return false;
+		}
+
+		// Core keeps these per taxonomy. Point the default term at the surviving
+		// term with the configured slug; registration had pointed it at the
+		// duplicate just deleted.
+		delete_option( 'default_term_' . $old );
+		delete_option( $old . '_children' );
+		$default_slug = $config[ $new ]['default_term'] ?? null;
+		if ( $default_slug ) {
+			$term = get_term_by( 'slug', $default_slug, $new );
+			if ( $term ) {
+				update_option( 'default_term_' . $new, (int) $term->term_id );
+			}
+		}
+
+		// Menu items that link to a term record its taxonomy.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- one-time migration.
+		$menu_items = $wpdb->get_col( $wpdb->prepare( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_menu_item_object' AND meta_value = %s", $old ) );
+		$wpdb->update(
+			$wpdb->postmeta,
+			array( 'meta_value' => $new ),
+			array(
+				'meta_key'   => '_menu_item_object',
+				'meta_value' => $old,
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+		foreach ( $menu_items as $menu_item ) {
+			wp_cache_delete( (int) $menu_item, 'post_meta' );
+		}
+	}
+
+	petsync_migrate_9_block_markup();
+
+	// The SQL above went round the object cache, which may still hold term
+	// objects naming the old taxonomy, and relationship caches for the new names
+	// filled earlier on this request, before the rename, as empty. A site with a
+	// persistent cache would otherwise show pets with no status until those
+	// expired.
+	foreach ( petsync_taxonomy_renames() as $new ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
+		$term_ids = $wpdb->get_col( $wpdb->prepare( "SELECT term_id FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s", $new ) );
+		clean_term_cache( array_map( 'intval', $term_ids ), $new );
+		if ( ! empty( $merged[ $new ] ) ) {
+			wp_update_term_count_now( $merged[ $new ], $new );
+		}
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
+	$pet_ids = $wpdb->get_col( "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'vcps_pet'" );
+	clean_object_term_cache( array_map( 'intval', $pet_ids ), 'vcps_pet' );
+
+	// Rewrite rules map each slug to its query var, and the query vars changed.
+	flush_rewrite_rules( false );
+
+	return true;
+}
+
+/**
+ * Migration 9's rewrite of saved block markup.
+ *
+ * Core blocks name a taxonomy in their attributes: core/post-terms as "term",
+ * core/query as a "taxQuery" key. Only the attribute JSON inside block
+ * delimiters is touched, so prose that happens to mention a name is left alone.
+ */
+function petsync_migrate_9_block_markup(): void {
+	global $wpdb;
+
+	$names = implode( '|', array_map( 'preg_quote', array_keys( petsync_taxonomy_renames() ) ) );
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
+	$posts = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT ID, post_content FROM {$wpdb->posts} WHERE post_type <> 'revision' AND post_content LIKE %s AND post_content LIKE %s",
+			'%' . $wpdb->esc_like( '<!-- wp:' ) . '%',
+			'%' . $wpdb->esc_like( '"pet_' ) . '%'
+		)
+	);
+
+	foreach ( $posts as $post ) {
+		$content = preg_replace_callback(
+			'/<!-- wp:.*?-->/s',
+			static fn( array $block ): string => (string) preg_replace( '/"(' . $names . ')"/', '"vcps_$1"', $block[0] ),
+			$post->post_content
+		);
+
+		if ( null !== $content && $content !== $post->post_content ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration; no revision for a data repair.
+			$wpdb->update( $wpdb->posts, array( 'post_content' => $content ), array( 'ID' => (int) $post->ID ) );
+			clean_post_cache( (int) $post->ID );
+		}
+	}
 }

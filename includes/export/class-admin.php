@@ -46,13 +46,13 @@ class Admin {
 
 		$statuses = get_terms(
 			array(
-				'taxonomy'   => 'pet_status',
+				'taxonomy'   => 'vcps_pet_status',
 				'hide_empty' => true,
 			)
 		);
 		$animals  = get_terms(
 			array(
-				'taxonomy'   => 'pet_animal',
+				'taxonomy'   => 'vcps_pet_animal',
 				'hide_empty' => true,
 			)
 		);
