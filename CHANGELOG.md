@@ -81,6 +81,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the REST API, which named every status, Euthanized included.
 - A synced pet drafted in WordPress is published again by the next sync, as
   the pets list now says. To keep one off the site, hide it on Petstablished.
+- **The sync can bring in every species.** It asked Petstablished for cats
+  and dogs only, so a shelter's rabbits, birds and other animals never
+  appeared. Pets → Sync Settings now has "Species to sync": empty syncs every
+  species. A site that was already syncing keeps cats and dogs until someone
+  clears or changes it; a new site syncs everything.
 
 ### Fixed
 - Saving Pets → Sync Settings reset the staleness settings, which have no

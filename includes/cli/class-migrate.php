@@ -43,6 +43,7 @@ class Migrate {
 		8  => 'Seed _pet_last_seen so staleness has a baseline (touches all pets)',
 		9  => 'Give the pet taxonomies the vcps_ prefix (keeps their URLs)',
 		10 => 'Backfill vcps_pet_attribute terms again: syncs had skipped them (touches all pets)',
+		11 => 'Keep syncing only cats and dogs where a sync already ran (settings only)',
 	);
 
 	/**
