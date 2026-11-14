@@ -149,6 +149,11 @@ class Exporter {
 					continue;
 				}
 
+				if ( 'post_status' === $column ) {
+					$row[ $column ] = (string) get_post_status( $post_id );
+					continue;
+				}
+
 				// Readable text, not the display HTML. See Description.
 				if ( 'description' === $column ) {
 					$row[ $column ] = Description::to_cell( (string) get_post_field( 'post_content', $post_id, 'raw' ) );
@@ -184,11 +189,20 @@ class Exporter {
 	/**
 	 * Post IDs to export.
 	 *
-	 * @param array<string, mixed> $filters status / animal / provider.
+	 * @param array<string, mixed> $filters status / animal / provider, and
+	 *                                      unpublished to include drafts,
+	 *                                      pending and private pets.
 	 * @return int[]
 	 */
 	public static function pet_ids( array $filters = array() ): array {
 		$query = Query::for( 'vcps_pet' );
+
+		// Published only by default, as the export always was. With this, the
+		// export is a whole backup; post_status travels with each row, so a
+		// restore does not publish what was not.
+		if ( ! empty( $filters['unpublished'] ) ) {
+			$query->withArgs( array( 'post_status' => array( 'publish', 'future', 'draft', 'pending', 'private' ) ) );
+		}
 
 		if ( ! empty( $filters['status'] ) ) {
 			$query->status( (string) $filters['status'] );
@@ -227,7 +241,7 @@ class Exporter {
 		$rows    = array();
 
 		foreach ( $ids as $id ) {
-			$pet = Pet_Hydrator::get( (int) $id, 'full' );
+			$pet = Pet_Hydrator::get_any_status( (int) $id, 'full' );
 			if ( $pet ) {
 				$rows[] = self::row( $pet, $columns, (int) $id );
 			}
@@ -286,7 +300,7 @@ class Exporter {
 		$pets    = array();
 
 		foreach ( $ids as $id ) {
-			$pet = Pet_Hydrator::get( (int) $id, 'full' );
+			$pet = Pet_Hydrator::get_any_status( (int) $id, 'full' );
 			if ( ! $pet ) {
 				continue;
 			}
@@ -298,6 +312,11 @@ class Exporter {
 				$terms = self::taxonomy_values( $column, (int) $id );
 				if ( null !== $terms ) {
 					$record[ $column ] = $terms;
+					continue;
+				}
+
+				if ( 'post_status' === $column ) {
+					$record[ $column ] = (string) get_post_status( (int) $id );
 					continue;
 				}
 
@@ -313,8 +332,8 @@ class Exporter {
 					continue;
 				}
 				if ( Schema::is_importable( $column ) ) {
-					$meta                = get_post_meta( (int) $id, $prefix . $column, true );
-					$record[ $column ]   = '' === $meta ? null : $meta;
+					$meta              = get_post_meta( (int) $id, $prefix . $column, true );
+					$record[ $column ] = '' === $meta ? null : $meta;
 				}
 			}
 			$pets[] = $record;
@@ -322,12 +341,14 @@ class Exporter {
 
 		return (string) wp_json_encode(
 			array(
-				'generator'  => 'ShelterKit Pets ' . PETSYNC_VERSION,
-				'exported'   => gmdate( 'c' ),
-				'mode'       => $mode,
-				'importable' => Schema::PORTABLE === $mode,
-				'columns'    => $columns,
-				'pets'       => $pets,
+				'generator' => 'ShelterKit Pets ' . PETSYNC_VERSION,
+				'exported'  => gmdate( 'c' ),
+				'mode'      => $mode,
+				// Whether these are the portable columns a CSV import reads. Not
+				// "importable": nothing imports JSON.
+				'portable'  => Schema::PORTABLE === $mode,
+				'columns'   => $columns,
+				'pets'      => $pets,
 			),
 			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 		);

@@ -44,7 +44,9 @@ class Schema {
 	/**
 	 * Identity and display columns. `id` is the local post ID, which an import
 	 * matches on when a row has no microchip that does; `name` is the post
-	 * title; `description` is the post content.
+	 * title; `description` is the post content; `post_status` is whether the
+	 * pet is published, which an import applies only to pets it adds, so a
+	 * restored backup does not publish its drafts.
 	 *
 	 * `description` is a COMPUTED field, so it does not arrive via
 	 * editable_fields — but omitting it meant a portable export carried every
@@ -54,7 +56,7 @@ class Schema {
 	 *
 	 * @var string[]
 	 */
-	private const IDENTITY = array( 'id', 'name', 'description' );
+	private const IDENTITY = array( 'id', 'name', 'description', 'post_status' );
 
 	/**
 	 * @return array<string, mixed> The vcps_pet entity config.

@@ -52,6 +52,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **An unknown status is refused.** "Adoptable" instead of "Available" used to
   create a new status, which hid those pets from every adoptable listing. A
   status must now be one the site has, by name or slug.
+- **Export can include unpublished pets, for a complete backup.** Pets →
+  Export has an option, and WP-CLI `--include-unpublished`, to add drafts,
+  pending and private pets. A `post_status` column now travels with every
+  row. An import applies it only to pets it adds, so restoring a backup does
+  not publish its drafts, and an export edited for a week does not put back
+  up a pet unlisted in the meantime. Two records sharing a microchip, such
+  as a re-listed animal's old draft, are both restored.
+- **Spreadsheets as Excel saves them import cleanly.** A file in Excel's
+  older Windows "CSV" format (Windows-1252) is converted, so accented letters
+  and curly apostrophes no longer fail with "Could not insert post into the
+  database". A file separated by semicolons, as Excel writes in much of
+  Europe, is read as such. The preview says when either happened.
+- **The JSON export says `"portable"` instead of `"importable"`.** Nothing
+  imports JSON; the flag says whether its columns are the ones a CSV import
+  reads.
 
 ### Fixed
 - An export of synced pets could not be imported back: every row failed,

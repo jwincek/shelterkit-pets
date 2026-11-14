@@ -402,6 +402,12 @@ class Admin {
 					<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=vcps_pet' ) ); ?>"><?php esc_html_e( 'View pets', 'shelterkit-pets' ); ?></a>
 				<?php endif; ?>
 			</p>
+			<?php if ( 'UTF-8' !== ( $report['encoding'] ?? 'UTF-8' ) ) : ?>
+				<p><?php esc_html_e( 'This file was saved in Excel\'s older "CSV" format (Windows-1252) and was converted. If accented letters look wrong in the examples, save it as "CSV UTF-8" and upload it again.', 'shelterkit-pets' ); ?></p>
+			<?php endif; ?>
+			<?php if ( ';' === ( $report['delimiter'] ?? ',' ) ) : ?>
+				<p><?php esc_html_e( 'This file separates its columns with semicolons, and was read that way.', 'shelterkit-pets' ); ?></p>
+			<?php endif; ?>
 			<?php foreach ( (array) $report['unmapped'] as $header ) : ?>
 				<p>
 					<?php

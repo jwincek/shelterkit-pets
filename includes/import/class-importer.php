@@ -58,6 +58,17 @@ class Importer {
 	private const CLOSED_TAXONOMY_COLUMNS = array( 'status' );
 
 	/**
+	 * The post statuses a post_status cell may give a new pet. Not trash, and
+	 * not future, which needs a date the sheet does not carry.
+	 */
+	private const POST_STATUSES = array( 'publish', 'draft', 'pending', 'private' );
+
+	/**
+	 * Columns that are the post itself rather than meta or terms.
+	 */
+	private const POST_COLUMNS = array( 'id', 'name', 'description', 'post_status' );
+
+	/**
 	 * @return array<string, mixed> The vcps_pet entity config.
 	 */
 	private static function entity(): array {
@@ -72,12 +83,24 @@ class Importer {
 	 * Parse CSV text into a header row and data rows.
 	 *
 	 * @param string $csv Raw file contents.
-	 * @return array{headers: string[], rows: array<int, string[]>}|\WP_Error
+	 * @return array{headers: string[], rows: array<int, string[]>, encoding: string, delimiter: string}|\WP_Error
 	 */
 	public static function parse( string $csv ): array|\WP_Error {
 		if ( '' === trim( $csv ) ) {
 			return new \WP_Error( 'petsync_import_empty', __( 'The file is empty.', 'shelterkit-pets' ) );
 		}
+
+		// Excel's plain "CSV (Comma delimited)" on Windows writes Windows-1252,
+		// not UTF-8. Read as UTF-8, every accented letter and every curly
+		// apostrophe Excel typed for the shelter is an invalid byte, and the
+		// row failed with "Could not insert post into the database".
+		$encoding = 'UTF-8';
+		if ( 1 !== preg_match( '//u', $csv ) ) {
+			$csv      = self::from_windows_1252( $csv );
+			$encoding = 'Windows-1252';
+		}
+
+		$delimiter = self::delimiter( $csv );
 
 		// php://temp rather than a real file: the upload has already been read
 		// into memory by the caller, and fgetcsv is the only correct way to
@@ -91,14 +114,14 @@ class Importer {
 		fwrite( $handle, $csv ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- in-memory stream.
 		rewind( $handle );
 
-		$headers = fgetcsv( $handle, 0, ',', '"', '' );
+		$headers = fgetcsv( $handle, 0, $delimiter, '"', '' );
 		if ( ! is_array( $headers ) ) {
 			fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- in-memory stream.
 			return new \WP_Error( 'petsync_import_no_header', __( 'The file has no header row.', 'shelterkit-pets' ) );
 		}
 
 		$rows = array();
-		while ( ( $row = fgetcsv( $handle, 0, ',', '"', '' ) ) !== false ) { // phpcs:ignore WordPress.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition -- the idiomatic fgetcsv loop.
+		while ( ( $row = fgetcsv( $handle, 0, $delimiter, '"', '' ) ) !== false ) { // phpcs:ignore WordPress.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition -- the idiomatic fgetcsv loop.
 			// fgetcsv yields array( null ) for a blank line. Trailing blank
 			// lines are normal in a spreadsheet export and are not errors.
 			if ( array( null ) === $row || array( '' ) === $row ) {
@@ -122,9 +145,82 @@ class Importer {
 		fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- in-memory stream.
 
 		return array(
-			'headers' => array_map( 'strval', $headers ),
-			'rows'    => $rows,
+			'headers'   => array_map( 'strval', $headers ),
+			'rows'      => $rows,
+			'encoding'  => $encoding,
+			'delimiter' => $delimiter,
 		);
+	}
+
+	/**
+	 * The column separator, judged from the header row.
+	 *
+	 * Where the decimal separator is a comma, as in much of Europe, Excel
+	 * separates columns with semicolons. Such a file read as commas is one
+	 * column, and was refused as having no name. Only the header decides,
+	 * outside quotes, so semicolons in a comma file's cells change nothing.
+	 *
+	 * @param string $csv File contents, as UTF-8.
+	 */
+	private static function delimiter( string $csv ): string {
+		$header = strtok( $csv, "\n" );
+		$bare   = (string) preg_replace( '/"[^"]*"/', '', (string) $header );
+
+		return substr_count( $bare, ';' ) > substr_count( $bare, ',' ) ? ';' : ',';
+	}
+
+	/**
+	 * Windows-1252 bytes as UTF-8.
+	 *
+	 * A table rather than mb_convert_encoding(), which WordPress does not
+	 * require. 0xA0 to 0xFF are the same code points in Unicode; 0x80 to 0x9F
+	 * are Windows-1252's own, where Excel keeps curly quotes, dashes and the
+	 * euro sign. The five bytes it leaves undefined become U+FFFD.
+	 *
+	 * @param string $bytes File contents.
+	 */
+	private static function from_windows_1252( string $bytes ): string {
+		static $map = null;
+
+		if ( null === $map ) {
+			$own = array(
+				0x80 => 0x20AC,
+				0x82 => 0x201A,
+				0x83 => 0x0192,
+				0x84 => 0x201E,
+				0x85 => 0x2026,
+				0x86 => 0x2020,
+				0x87 => 0x2021,
+				0x88 => 0x02C6,
+				0x89 => 0x2030,
+				0x8A => 0x0160,
+				0x8B => 0x2039,
+				0x8C => 0x0152,
+				0x8E => 0x017D,
+				0x91 => 0x2018,
+				0x92 => 0x2019,
+				0x93 => 0x201C,
+				0x94 => 0x201D,
+				0x95 => 0x2022,
+				0x96 => 0x2013,
+				0x97 => 0x2014,
+				0x98 => 0x02DC,
+				0x99 => 0x2122,
+				0x9A => 0x0161,
+				0x9B => 0x203A,
+				0x9C => 0x0153,
+				0x9E => 0x017E,
+				0x9F => 0x0178,
+			);
+
+			$map = array();
+			for ( $byte = 0x80; $byte <= 0xFF; $byte++ ) {
+				$code                = $byte >= 0xA0 ? $byte : ( $own[ $byte ] ?? 0xFFFD );
+				$map[ chr( $byte ) ] = html_entity_decode( '&#' . $code . ';', ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+			}
+		}
+
+		return strtr( $bytes, $map );
 	}
 
 	/**
@@ -216,6 +312,15 @@ class Importer {
 						);
 					}
 				}
+			}
+
+			if ( 'post_status' === $column && ! in_array( strtolower( $value ), self::POST_STATUSES, true ) ) {
+				$errors[] = sprintf(
+					/* translators: 1: the cell's value, 2: comma-separated allowed values. */
+					__( 'post_status: "%1$s" is not one of: %2$s.', 'shelterkit-pets' ),
+					$value,
+					implode( ', ', self::POST_STATUSES )
+				);
 			}
 
 			// numerical_age is deliberately not checked for a number, despite its
@@ -314,11 +419,13 @@ class Importer {
 	 * at VCHS do. So every pet with the number is found, a listed one is
 	 * preferred, then the most recently changed, and the count is reported.
 	 *
-	 * @param array<string, string> $data Canonical column => value.
+	 * @param array<string, string> $data    Canonical column => value.
+	 * @param int[]                 $created Pets this run created, which a
+	 *                                       microchip never matches.
 	 * @return array{id: int, by: string, also: int[]} by is 'id', 'microchip'
 	 *         or ''; also lists other pets with the same microchip.
 	 */
-	private static function find_existing( array $data ): array {
+	private static function find_existing( array $data, array $created = array() ): array {
 		$chip = trim( $data['microchip_id'] ?? '' );
 
 		$id   = trim( $data['id'] ?? '' );
@@ -336,7 +443,7 @@ class Importer {
 			}
 		}
 
-		$found = '' === $chip ? array() : self::pets_with_chip( $chip );
+		$found = '' === $chip ? array() : array_values( array_diff( self::pets_with_chip( $chip ), $created ) );
 
 		return array(
 			'id'   => (int) ( $found[0] ?? 0 ),
@@ -464,6 +571,10 @@ class Importer {
 		}
 
 		$report = array(
+			// How the file was read, which the preview reports when it is not
+			// the plain case: a legacy encoding, or semicolons.
+			'encoding'   => $parsed['encoding'],
+			'delimiter'  => $parsed['delimiter'],
 			'headers'    => $parsed['headers'],
 			// The first row's cells, so the preview can show what each column
 			// holds next to the field it is about to fill.
@@ -482,8 +593,13 @@ class Importer {
 			'rows'       => array(),
 		);
 
-		// Microchip number => the row it first appeared on.
-		$seen_chips = array();
+		// A record's key => the row it first appeared on. See below.
+		$seen = array();
+
+		// Pets this run has created. A later row is never matched to one by
+		// microchip: in a backup, two records sharing a microchip are two
+		// records, and the second must not overwrite the first.
+		$created = array();
 
 		foreach ( $parsed['rows'] as $offset => $raw ) {
 			// +2: one for the header row, one because humans count from 1. A
@@ -510,20 +626,27 @@ class Importer {
 			$data   = self::associate( $raw, $mapping );
 			$errors = array_merge( $errors, self::validate( $data ) );
 
-			// The same animal twice in one file. Checked here, in the code both
+			// The same record twice in one file. Checked here, in the code both
 			// the preview and the import run, because only the import could see
 			// it otherwise: the preview found no match for either row and said
 			// "2 to add", then the import added the first and overwrote it with
-			// the second.
+			// the second. A record is its exported id when it has one, since a
+			// backup can hold two records for one microchip, such as a
+			// re-listed animal's old draft (50 at VCHS); otherwise its microchip.
+			$id   = trim( $data['id'] ?? '' );
 			$chip = trim( $data['microchip_id'] ?? '' );
-			if ( '' !== $chip && isset( $seen_chips[ $chip ] ) ) {
+			$key  = '' !== $id ? 'id:' . $id : ( '' !== $chip ? 'chip:' . $chip : '' );
+			if ( '' !== $key && isset( $seen[ $key ] ) ) {
 				$errors[] = sprintf(
-					/* translators: %d: row number. */
-					__( 'Same microchip number as row %d. Each animal can only appear once in a file.', 'shelterkit-pets' ),
-					$seen_chips[ $chip ]
+					'' !== $id
+						/* translators: %d: row number. */
+						? __( 'Same id as row %d. Each pet can only appear once in a file.', 'shelterkit-pets' )
+						/* translators: %d: row number. */
+						: __( 'Same microchip number as row %d. Each animal can only appear once in a file.', 'shelterkit-pets' ),
+					$seen[ $key ]
 				);
-			} elseif ( '' !== $chip ) {
-				$seen_chips[ $chip ] = $line;
+			} elseif ( '' !== $key ) {
+				$seen[ $key ] = $line;
 			}
 
 			if ( $errors ) {
@@ -540,7 +663,7 @@ class Importer {
 				}
 			}
 
-			$match    = self::find_existing( $data );
+			$match    = self::find_existing( $data, $created );
 			$existing = $match['id'];
 			$action   = 'create';
 			$notes    = array();
@@ -579,6 +702,17 @@ class Importer {
 				if ( self::ON_MATCH_UPDATE === $on_match ) {
 					$action = 'update';
 
+					$wanted = strtolower( trim( $data['post_status'] ?? '' ) );
+					$actual = (string) get_post_status( $existing );
+					if ( '' !== $wanted && $wanted !== $actual ) {
+						$notes[] = sprintf(
+							/* translators: 1: the pet's post status, such as draft, 2: the status in the file. */
+							__( 'Stays %1$s, not %2$s: an import sets the post status of pets it adds, never of a pet already here. Change it in the editor.', 'shelterkit-pets' ),
+							$actual,
+							$wanted
+						);
+					}
+
 					$current = (string) get_post_field( 'post_title', $existing, 'raw' );
 					if ( 'id' === $match['by'] && 0 !== strcasecmp( trim( $current ), trim( $data['name'] ) ) ) {
 						$notes[] = sprintf(
@@ -603,6 +737,9 @@ class Importer {
 				++$report['updated'];
 			} else {
 				++$report['created'];
+				if ( $commit ) {
+					$created[] = (int) $post_id;
+				}
 			}
 
 			// A preview has no new post yet, but an update already knows its pet.
@@ -660,11 +797,16 @@ class Importer {
 		// wp_insert_post() unslashes what it is given, so unslashed input lost
 		// every backslash, including the escapes in block attributes' JSON.
 		if ( $existing ) {
-			// Status is left as it was: updating a draft must not publish it.
+			// Status is left as it was, whatever the sheet says: updating a
+			// draft must not publish it, and an export edited for a week must
+			// not put back up a pet unlisted in the meantime.
 			$postarr['ID'] = $existing;
 			$post_id       = wp_update_post( wp_slash( $postarr ), true );
 		} else {
-			$postarr['post_status'] = 'publish';
+			// A restored backup brings each pet back as it was; a sheet without
+			// the column publishes, as an import always has.
+			$wanted                 = strtolower( trim( $data['post_status'] ?? '' ) );
+			$postarr['post_status'] = in_array( $wanted, self::POST_STATUSES, true ) ? $wanted : 'publish';
 			$post_id                = wp_insert_post( wp_slash( $postarr ), true );
 		}
 
@@ -679,7 +821,7 @@ class Importer {
 		// pet; giving it a provider would make the next sync for that provider
 		// find it absent from the feed and draft it. See the class docblock.
 		foreach ( $data as $column => $value ) {
-			if ( in_array( $column, array( 'id', 'name', 'description' ), true ) || isset( $taxonomies[ $column ] ) ) {
+			if ( in_array( $column, self::POST_COLUMNS, true ) || isset( $taxonomies[ $column ] ) ) {
 				continue;
 			}
 			if ( ! Schema::is_importable( $column ) ) {
