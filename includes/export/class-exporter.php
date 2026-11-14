@@ -81,6 +81,26 @@ class Exporter {
 	}
 
 	/**
+	 * The main photo's URL at full size.
+	 *
+	 * The entity's image is a resized copy, which the Media Library cannot map
+	 * back to its attachment, so a same-site round trip would download every
+	 * photo again. A synced pet with no featured image yet falls back to the
+	 * provider's URL, which another site can download.
+	 *
+	 * @param int                  $post_id Post ID.
+	 * @param array<string, mixed> $pet     Hydrated pet.
+	 */
+	private static function image_url( int $post_id, array $pet ): string {
+		$thumbnail = (int) get_post_thumbnail_id( $post_id );
+		if ( $thumbnail ) {
+			return (string) wp_get_attachment_url( $thumbnail );
+		}
+
+		return (string) ( $pet['image'] ?? '' );
+	}
+
+	/**
 	 * Every term a pet has in a taxonomy, by name or by slug.
 	 *
 	 * The hydrated entity carries only the first, which is what a pet card
@@ -151,6 +171,11 @@ class Exporter {
 
 				if ( 'post_status' === $column ) {
 					$row[ $column ] = (string) get_post_status( $post_id );
+					continue;
+				}
+
+				if ( 'image' === $column ) {
+					$row[ $column ] = self::image_url( $post_id, $pet );
 					continue;
 				}
 
@@ -317,6 +342,11 @@ class Exporter {
 
 				if ( 'post_status' === $column ) {
 					$record[ $column ] = (string) get_post_status( (int) $id );
+					continue;
+				}
+
+				if ( 'image' === $column ) {
+					$record[ $column ] = self::image_url( (int) $id, $pet );
 					continue;
 				}
 

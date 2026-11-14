@@ -1143,7 +1143,7 @@ class Petsync_Sync {
 	 * @param string $desc    Attachment description.
 	 * @return int|\WP_Error Attachment ID.
 	 */
-	private static function sideload_within_budget( string $url, int $post_id, string $desc ) {
+	public static function sideload_within_budget( string $url, int $post_id, string $desc ) {
 		$limit_sizes = static function ( array $sizes ): array {
 			/**
 			 * Image sizes generated for sideloaded pet photos.

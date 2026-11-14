@@ -96,6 +96,9 @@ register_deactivation_hook(
 		// has loaded — deactivating straight after an upgrade would otherwise
 		// leave a recurring event scheduled against a hook nothing answers.
 		wp_clear_scheduled_hook( 'petstablished_scheduled_sync' );
+		// Photos an import has yet to download. The pets keep their queue, and
+		// the next import schedules it again.
+		wp_clear_scheduled_hook( 'petsync_import_photos' );
 
 		// Flush rewrite rules to remove our custom rules cleanly.
 		flush_rewrite_rules();
@@ -117,6 +120,9 @@ function petsync_init(): void {
 
 	// Which statuses the site shows, and why a synced pet is a draft.
 	\Petsync\Core\Pet_Visibility::init();
+
+	// Photos an import named by URL, downloaded after it.
+	\Petsync\Import\Photo_Queue::init();
 
 	// Apply compatibility filters (?compat_goodWithDogs=1 etc.) to the pet
 	// archive / taxonomy main query. Compatibility data lives in the

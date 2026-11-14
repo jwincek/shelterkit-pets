@@ -89,6 +89,15 @@ class Column_Mapper {
 		'neuteredspayed'   => 'spayed_neutered',
 		'desexed'          => 'spayed_neutered',
 		'microchipped'     => 'microchip_id',
+		// Photos, by URL (#126).
+		'photo'            => 'image',
+		'photourl'         => 'image',
+		'imageurl'         => 'image',
+		'mainphoto'        => 'image',
+		'picture'          => 'image',
+		'photos'           => 'gallery',
+		'morephotos'       => 'gallery',
+		'galleryurls'      => 'gallery',
 	);
 
 	/**
@@ -122,7 +131,7 @@ class Column_Mapper {
 
 		// An exact match on a real column always wins over an alias, so a sheet
 		// whose header is literally 'age' is never rerouted by a synonym.
-		foreach ( Schema::columns( Schema::PORTABLE ) as $column ) {
+		foreach ( Schema::importable_columns() as $column ) {
 			if ( self::normalise( $column ) === $key ) {
 				return $column;
 			}
@@ -222,6 +231,6 @@ class Column_Mapper {
 	 * @return string[]
 	 */
 	public static function available_columns(): array {
-		return Schema::columns( Schema::PORTABLE );
+		return Schema::importable_columns();
 	}
 }

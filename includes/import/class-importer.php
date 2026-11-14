@@ -66,7 +66,7 @@ class Importer {
 	/**
 	 * Columns that are the post itself rather than meta or terms.
 	 */
-	private const POST_COLUMNS = array( 'id', 'name', 'description', 'post_status' );
+	private const POST_COLUMNS = array( 'id', 'name', 'description', 'post_status', 'image', 'gallery' );
 
 	/**
 	 * @return array<string, mixed> The vcps_pet entity config.
@@ -585,6 +585,8 @@ class Importer {
 			// Taxonomy column => terms this file would add to the site. A typo
 			// in a breed becomes a new breed, so the preview lists them.
 			'new_terms'  => array(),
+			// Photos this file would download, after the import.
+			'photos'     => 0,
 			'committed'  => $commit,
 			'created'    => 0,
 			'updated'    => 0,
@@ -725,6 +727,13 @@ class Importer {
 				}
 			}
 
+			// Counted before writing, so the preview and the import agree. A
+			// photo that cannot come is a note, not an error: the pet still
+			// imports, since a pet without its photo beats no pet.
+			$photos            = self::photos( $data );
+			$notes             = array_merge( $notes, $photos['notes'] );
+			$report['photos'] += count( array_filter( array_filter( array_merge( array( $photos['image'] ), $photos['gallery'] ), 'strlen' ), array( Photo_Queue::class, 'needs_download' ) ) );
+
 			$post_id = $commit ? self::write( $data, 'update' === $action ? $existing : 0, $taxonomies ) : 0;
 
 			if ( $commit && is_wp_error( $post_id ) ) {
@@ -749,6 +758,50 @@ class Importer {
 		}
 
 		return $report;
+	}
+
+	/**
+	 * The photos a row names that can be used, and a note for each that cannot.
+	 *
+	 * The server fetches what the file names, so each must be a public address
+	 * of an image; see Photo_Queue::problem().
+	 *
+	 * @param array<string, string> $data Canonical column => value.
+	 * @return array{image: string, gallery: string[], notes: string[]}
+	 */
+	private static function photos( array $data ): array {
+		$out = array(
+			'image'   => '',
+			'gallery' => array(),
+			'notes'   => array(),
+		);
+
+		$images = Schema::split_list( $data['image'] ?? '' );
+		if ( count( $images ) > 1 ) {
+			$out['notes'][] = __( 'image: one photo only, so it was skipped. Put the others in a gallery column, separated by |.', 'shelterkit-pets' );
+			$images         = array();
+		}
+
+		$candidates = array(
+			'image'   => $images,
+			'gallery' => Schema::split_list( $data['gallery'] ?? '' ),
+		);
+
+		foreach ( $candidates as $column => $urls ) {
+			foreach ( $urls as $url ) {
+				$problem = Photo_Queue::problem( $url );
+				if ( null !== $problem ) {
+					/* translators: 1: column name, 2: a URL, 3: what is wrong with it. */
+					$out['notes'][] = sprintf( __( '%1$s: %2$s %3$s, so it was skipped.', 'shelterkit-pets' ), $column, $url, $problem );
+				} elseif ( 'image' === $column ) {
+					$out['image'] = $url;
+				} else {
+					$out['gallery'][] = $url;
+				}
+			}
+		}
+
+		return $out;
 	}
 
 	/**
@@ -820,8 +873,16 @@ class Importer {
 		// _pet_provider is deliberately NOT written. An imported pet is a manual
 		// pet; giving it a provider would make the next sync for that provider
 		// find it absent from the feed and draft it. See the class docblock.
+		// A gallery given as URLs replaces one given as IDs; the queue sets the
+		// IDs once the photos are here.
+		$photos       = self::photos( $data );
+		$gallery_urls = $photos['gallery'];
+
 		foreach ( $data as $column => $value ) {
 			if ( in_array( $column, self::POST_COLUMNS, true ) || isset( $taxonomies[ $column ] ) ) {
+				continue;
+			}
+			if ( 'gallery_ids' === $column && $gallery_urls ) {
 				continue;
 			}
 			if ( ! Schema::is_importable( $column ) ) {
@@ -852,6 +913,12 @@ class Importer {
 		// silently vanish from compatibility filtering.
 		Pet_Hydrator::flush_cache();
 		\Petsync\Core\CPT_Registry::sync_attribute_terms( $post_id );
+
+		// Photos last: what this site already has is applied now, and the rest
+		// is fetched after the import. A blank cell leaves a pet's photos alone.
+		if ( '' !== $photos['image'] || $gallery_urls ) {
+			Photo_Queue::queue( $post_id, $photos['image'], $gallery_urls );
+		}
 
 		return $post_id;
 	}

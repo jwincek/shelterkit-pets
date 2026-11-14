@@ -59,6 +59,19 @@ class Schema {
 	private const IDENTITY = array( 'id', 'name', 'description', 'post_status' );
 
 	/**
+	 * The main photo, as a URL. Exported so a backup carries it and a restore
+	 * brings it back; the pet model's own name for it.
+	 */
+	private const MEDIA = array( 'image' );
+
+	/**
+	 * Columns an import reads that a portable export does not write. gallery
+	 * is photo URLs; a portable export carries the gallery as gallery_ids,
+	 * which a same-site round trip needs and a full export adds the URLs to.
+	 */
+	private const IMPORT_ONLY = array( 'gallery' );
+
+	/**
 	 * @return array<string, mixed> The vcps_pet entity config.
 	 */
 	private static function entity(): array {
@@ -84,6 +97,7 @@ class Schema {
 		// that only shows up as a column of empty cells.
 		$columns = array_merge(
 			self::IDENTITY,
+			self::MEDIA,
 			array_keys( (array) ( $entity['taxonomies'] ?? array() ) ),
 			array_keys( (array) ( $entity['editable_fields'] ?? array() ) )
 		);
@@ -111,7 +125,16 @@ class Schema {
 	 * @param string $column Column name.
 	 */
 	public static function is_importable( string $column ): bool {
-		return in_array( $column, self::columns( self::PORTABLE ), true );
+		return in_array( $column, self::importable_columns(), true );
+	}
+
+	/**
+	 * Every column an import reads: the portable ones, and the import-only.
+	 *
+	 * @return string[]
+	 */
+	public static function importable_columns(): array {
+		return array_values( array_unique( array_merge( self::columns( self::PORTABLE ), self::IMPORT_ONLY ) ) );
 	}
 
 	/**
