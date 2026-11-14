@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   would have undone it. Such rows are skipped with a note saying to edit the
   pet on the platform. A synced pet's microchip is now found in its provider
   data, so a shelter's own sheet no longer adds a copy of a synced pet.
+- **The import preview is now the confirmation step.** The first screen can
+  only preview; the "Import now" button that wrote on the first click is gone.
+  The preview keeps the uploaded file, so confirming imports exactly the file
+  previewed, without choosing it again. It shows how each column will be read,
+  with an example from the first row, and a dropdown to change or ignore any
+  column. Every row with an error or a note is listed, not only the first 25,
+  and so are the breeds and other terms the file would add.
+- **An unknown status is refused.** "Adoptable" instead of "Available" used to
+  create a new status, which hid those pets from every adoptable listing. A
+  status must now be one the site has, by name or slug.
 
 ### Fixed
 - An export of synced pets could not be imported back: every row failed,

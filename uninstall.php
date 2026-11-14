@@ -55,7 +55,9 @@ function petsync_uninstall_site(): bool {
 	delete_transient( 'petsync_sync_pets' );
 	delete_transient( 'petsync_sync_session' );
 
-	// Suffixed transients (e.g. paged sync snapshots) — no wildcard API.
+	// Suffixed transients (e.g. paged sync snapshots, and import files held
+	// for a preview by Pending_Upload) — no wildcard API. With an object cache
+	// the held files are out of reach here, but they expire within the hour.
 	$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->prepare(
 			"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",

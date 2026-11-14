@@ -53,6 +53,11 @@ class Importer {
 	private const MAX_ROWS = 5000;
 
 	/**
+	 * Taxonomy columns an import may only fill with terms the site already has.
+	 */
+	private const CLOSED_TAXONOMY_COLUMNS = array( 'status' );
+
+	/**
 	 * @return array<string, mixed> The vcps_pet entity config.
 	 */
 	private static function entity(): array {
@@ -184,6 +189,33 @@ class Importer {
 					$column,
 					$value
 				);
+			}
+
+			// A status the site does not have would be created, and a pet whose
+			// status is not 'available' is left off every adoptable listing.
+			// So "Adoptable" for "Available" is refused rather than quietly
+			// hiding the pet. Breeds and colours stay open: a shelter's breeds
+			// are not our list.
+			$taxonomy = Schema::taxonomy_columns()[ $column ] ?? '';
+			if ( in_array( $column, self::CLOSED_TAXONOMY_COLUMNS, true ) && taxonomy_exists( $taxonomy ) ) {
+				foreach ( Schema::split_list( $value ) as $term ) {
+					if ( ! term_exists( $term, $taxonomy ) ) {
+						$known    = get_terms(
+							array(
+								'taxonomy'   => $taxonomy,
+								'hide_empty' => false,
+								'fields'     => 'names',
+							)
+						);
+						$errors[] = sprintf(
+							/* translators: 1: column name, 2: the cell's value, 3: comma-separated list of allowed values. */
+							__( '%1$s: "%2$s" is not one of this site\'s values. Use one of: %3$s.', 'shelterkit-pets' ),
+							$column,
+							$term,
+							implode( ', ', is_array( $known ) ? $known : array() )
+						);
+					}
+				}
 			}
 
 			// numerical_age is deliberately not checked for a number, despite its
@@ -416,12 +448,12 @@ class Importer {
 		$commit   = ! empty( $options['commit'] );
 		$on_match = (string) ( $options['on_match'] ?? self::ON_MATCH_UPDATE );
 
-		// An explicit mapping from the confirmation UI wins; otherwise resolve
-		// the headers ourselves.
-		$mapped     = Column_Mapper::map( $parsed['headers'] );
-		$mapping    = isset( $options['mapping'] ) && is_array( $options['mapping'] )
-			? array_filter( $options['mapping'], static fn( $c ): bool => Schema::is_importable( (string) $c ) )
-			: $mapped['mapping'];
+		// A person's choices from the preview's dropdowns win; otherwise the
+		// headers are matched automatically. Both report in the same shape.
+		$mapped     = isset( $options['mapping'] ) && is_array( $options['mapping'] )
+			? Column_Mapper::from_choices( $parsed['headers'], $options['mapping'] )
+			: Column_Mapper::map( $parsed['headers'] );
+		$mapping    = $mapped['mapping'];
 		$taxonomies = Schema::taxonomy_columns();
 
 		if ( ! in_array( 'name', $mapping, true ) ) {
@@ -432,9 +464,16 @@ class Importer {
 		}
 
 		$report = array(
+			'headers'    => $parsed['headers'],
+			// The first row's cells, so the preview can show what each column
+			// holds next to the field it is about to fill.
+			'examples'   => $parsed['rows'][0] ?? array(),
 			'mapping'    => $mapping,
 			'unmapped'   => $mapped['unmapped'],
 			'duplicates' => $mapped['duplicates'],
+			// Taxonomy column => terms this file would add to the site. A typo
+			// in a breed becomes a new breed, so the preview lists them.
+			'new_terms'  => array(),
 			'committed'  => $commit,
 			'created'    => 0,
 			'updated'    => 0,
@@ -491,6 +530,14 @@ class Importer {
 				++$report['failed'];
 				$report['rows'][] = self::report_row( $line, $data['name'] ?? '', 'error', 0, $errors );
 				continue;
+			}
+
+			foreach ( $taxonomies as $column => $taxonomy ) {
+				foreach ( Schema::split_list( $data[ $column ] ?? '' ) as $term ) {
+					if ( taxonomy_exists( $taxonomy ) && ! term_exists( $term, $taxonomy ) && ! in_array( $term, $report['new_terms'][ $column ] ?? array(), true ) ) {
+						$report['new_terms'][ $column ][] = $term;
+					}
+				}
 			}
 
 			$match    = self::find_existing( $data );
