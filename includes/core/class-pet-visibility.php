@@ -229,7 +229,6 @@ final class Pet_Visibility {
 			array(
 				'taxonomy'   => self::taxonomy(),
 				'hide_empty' => false,
-				'exclude'    => array(),
 			)
 		);
 
@@ -260,7 +259,8 @@ final class Pet_Visibility {
 			return $args;
 		}
 
-		$args['exclude'] = array_merge( (array) ( $args['exclude'] ?? array() ), self::hidden_term_ids() );
+		// A handful of terms in one small taxonomy; excluding them is the point.
+		$args['exclude'] = array_merge( (array) ( $args['exclude'] ?? array() ), self::hidden_term_ids() ); // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
 
 		return $args;
 	}

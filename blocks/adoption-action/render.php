@@ -29,14 +29,9 @@ if ( ! $pet ) {
 // Only an available pet takes applications. A pending, on-hold or adopted pet
 // used to offer one anyway; it now says why it does not.
 if ( ! \Petsync\Core\Pet_Visibility::takes_applications( $pet ) ) {
-	$wrapper_attributes = get_block_wrapper_attributes(
-		array(
-			'class' => 'pet-adoption-cta__actions pet-adoption-cta__actions--closed',
-		)
-	);
 	printf(
 		'<div %1$s><p class="pet-adoption-cta__status">%2$s</p></div>',
-		$wrapper_attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes() returns escaped HTML.
+		get_block_wrapper_attributes( array( 'class' => 'pet-adoption-cta__actions pet-adoption-cta__actions--closed' ) ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes() returns escaped HTML.
 		esc_html(
 			sprintf(
 				/* translators: %s: the pet's status, such as Adoption Pending. */
