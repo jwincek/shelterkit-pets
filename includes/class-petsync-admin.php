@@ -79,6 +79,7 @@ class Petsync_Admin {
 		add_settings_field( 'auto_sync', __( 'Auto Sync', 'shelterkit-pets' ), array( $this, 'render_auto_sync_field' ), self::PAGE_SLUG, 'sync_settings' );
 		add_settings_field( 'sync_interval', __( 'Sync Interval', 'shelterkit-pets' ), array( $this, 'render_sync_interval_field' ), self::PAGE_SLUG, 'sync_settings' );
 		add_settings_field( 'batch_size', __( 'Batch Size', 'shelterkit-pets' ), array( $this, 'render_batch_size_field' ), self::PAGE_SLUG, 'sync_settings' );
+		add_settings_field( 'sync_species', __( 'Species to sync', 'shelterkit-pets' ), array( $this, 'render_sync_species_field' ), self::PAGE_SLUG, 'sync_settings', array( 'label_for' => 'petsync_sync_species' ) );
 		add_settings_field( 'public_statuses', __( 'Statuses shown on the site', 'shelterkit-pets' ), array( $this, 'render_public_statuses_field' ), self::PAGE_SLUG, 'sync_settings' );
 
 		// Uninstall Section.
@@ -110,6 +111,10 @@ class Petsync_Admin {
 			'stale_draft_days'         => 0,
 			// Statuses whose synced pets are published. See Pet_Visibility.
 			'public_statuses'          => \Petsync\Core\Pet_Visibility::DEFAULT_PUBLIC_STATUSES,
+			// Species the sync asks Petstablished for. Empty is every species.
+			// Sites that synced before this setting existed keep cats and dogs,
+			// which is what the sync used to ask for; see migration 11.
+			'sync_species'             => array(),
 		);
 	}
 
@@ -158,6 +163,7 @@ class Petsync_Admin {
 		$sanitized['stale_draft_days']  = absint( $input['stale_draft_days'] ?? self::get_defaults()['stale_draft_days'] );
 
 		$sanitized['public_statuses'] = self::sanitize_public_statuses( $input['public_statuses'] ?? self::get_defaults()['public_statuses'] );
+		$sanitized['sync_species']    = self::sanitize_species( $input['sync_species'] ?? array() );
 
 		// Reschedule cron if auto_sync, the interval, or whether there is a key
 		// at all changed. The last matters because nothing is scheduled without
@@ -191,6 +197,37 @@ class Petsync_Admin {
 		}
 
 		return $kept;
+	}
+
+	/**
+	 * Species names from the form's comma-separated field, or a stored list:
+	 * trimmed, each once whatever its case, in the order given.
+	 *
+	 * @param mixed $species Comma-separated string or list.
+	 * @return string[]
+	 */
+	private static function sanitize_species( $species ): array {
+		$names = is_array( $species ) ? $species : explode( ',', (string) $species );
+		$kept  = array();
+
+		foreach ( $names as $name ) {
+			$name = trim( sanitize_text_field( (string) $name ) );
+			if ( '' !== $name && ! in_array( strtolower( $name ), array_map( 'strtolower', $kept ), true ) ) {
+				$kept[] = $name;
+			}
+		}
+
+		return $kept;
+	}
+
+	public function render_sync_species_field(): void {
+		printf(
+			'<input type="text" class="regular-text" name="%1$s[sync_species]" id="petsync_sync_species" value="%2$s" placeholder="%3$s"><p class="description">%4$s</p>',
+			esc_attr( self::OPTION_NAME ),
+			esc_attr( implode( ', ', (array) self::get_settings()['sync_species'] ) ),
+			esc_attr__( 'Every species', 'shelterkit-pets' ),
+			esc_html__( 'Leave empty to sync every species you list on Petstablished. To sync only some, name them as Petstablished does, separated by commas: Cat, Dog. A synced pet of a species you remove is kept as a draft, and the pets list says why.', 'shelterkit-pets' )
+		);
 	}
 
 	public function render_public_statuses_field(): void {

@@ -39,10 +39,11 @@ final class Pet_Visibility {
 	 */
 	public const META = '_pet_unlisted';
 
-	public const HIDDEN_UPSTREAM  = 'hidden';
-	public const STATUS_NOT_SHOWN = 'status';
-	public const LEFT_FEED        = 'left_feed';
-	public const NOT_SEEN         = 'not_seen';
+	public const HIDDEN_UPSTREAM    = 'hidden';
+	public const STATUS_NOT_SHOWN   = 'status';
+	public const LEFT_FEED          = 'left_feed';
+	public const NOT_SEEN           = 'not_seen';
+	public const SPECIES_NOT_SYNCED = 'species';
 
 	/**
 	 * Shown unless a shelter chooses otherwise.
@@ -55,6 +56,12 @@ final class Pet_Visibility {
 		add_filter( "rest_{$taxonomy}_query", array( self::class, 'hide_from_rest_listing' ) );
 		add_filter( 'rest_request_before_callbacks', array( self::class, 'refuse_hidden_term' ), 10, 3 );
 		add_filter( 'display_post_states', array( self::class, 'post_states' ), 10, 2 );
+	}
+
+	public static function animal_taxonomy(): string {
+		$entity = (array) Config::get_path( 'entities', 'entities.vcps_pet', array() );
+
+		return (string) ( $entity['taxonomies']['animal']['taxonomy'] ?? 'vcps_pet_animal' );
 	}
 
 	public static function taxonomy(): string {
@@ -200,6 +207,11 @@ final class Pet_Visibility {
 			self::HIDDEN_UPSTREAM  => sprintf( __( 'Hidden on %s', 'shelterkit-pets' ), $label ),
 			/* translators: %s: a pet status, such as Adopted. */
 			self::STATUS_NOT_SHOWN => sprintf( __( '%s: not shown on this site', 'shelterkit-pets' ), $status ),
+			self::SPECIES_NOT_SYNCED => sprintf(
+				/* translators: %s: a species, such as Rabbit. */
+				__( '%s: not a species this site syncs', 'shelterkit-pets' ),
+				self::first_term_name( $post->ID, self::animal_taxonomy() )
+			),
 			/* translators: %s: platform name, such as Petstablished. */
 			'listed'               => sprintf( __( 'Listed on %s: the next sync will publish it', 'shelterkit-pets' ), $label ),
 			self::NOT_SEEN         => '' !== $since
@@ -215,6 +227,16 @@ final class Pet_Visibility {
 		};
 
 		return $states;
+	}
+
+	/**
+	 * @param int    $post_id  Post ID.
+	 * @param string $taxonomy Taxonomy.
+	 */
+	private static function first_term_name( int $post_id, string $taxonomy ): string {
+		$names = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => 'names' ) );
+
+		return is_array( $names ) && $names ? (string) $names[0] : '';
 	}
 
 	// ─── The REST API ───────────────────────────────────────────────────────

@@ -353,7 +353,7 @@ add_action( 'plugins_loaded', 'petsync_init' );
  * plugin's DATA version and is deliberately independent of the release version
  * in the plugin header — most releases change no stored data at all.
  */
-define( 'PETSYNC_DB_VERSION', 10 );
+define( 'PETSYNC_DB_VERSION', 11 );
 
 /**
  * The ordered migration list.
@@ -387,6 +387,7 @@ function petsync_get_migrations(): array {
 		// from, so every pet first synced since then has none, and every pet
 		// changed since has its previous terms. The backfill is the same.
 		10 => 'petsync_migrate_7_backfill_attribute_terms',
+		11 => 'petsync_migrate_11_sync_species',
 	);
 }
 
@@ -871,6 +872,31 @@ function petsync_migrate_7_backfill_attribute_terms(): bool {
 	foreach ( $pet_ids as $pet_id ) {
 		\Petsync\Core\CPT_Registry::sync_attribute_terms( $pet_id );
 	}
+
+	return true;
+}
+
+/**
+ * Migration 11 — keep syncing cats and dogs where a sync already ran.
+ *
+ * The sync asked Petstablished for cats and dogs only, hard-coded. It now asks
+ * for every species unless the sync_species setting names some. A site that
+ * has been syncing keeps exactly what it had, so no new animals appear on it
+ * until someone chooses so; clearing the setting syncs everything. A site
+ * with no key has never synced, and starts with every species, as a new
+ * install does.
+ *
+ * @return bool True when done.
+ */
+function petsync_migrate_11_sync_species(): bool {
+	$settings = get_option( 'petsync_settings', array() );
+
+	if ( ! is_array( $settings ) || array_key_exists( 'sync_species', $settings ) || '' === (string) ( $settings['public_key'] ?? '' ) ) {
+		return true;
+	}
+
+	$settings['sync_species'] = array( 'Cat', 'Dog' );
+	update_option( 'petsync_settings', $settings );
 
 	return true;
 }

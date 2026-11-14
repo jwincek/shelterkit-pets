@@ -466,15 +466,20 @@ class Petsync_Sync {
 	 * @return array|WP_Error { collection: array[], total_pages: int } or error.
 	 */
 	private function fetch_page( string $public_key, int $page ): array|WP_Error {
-		$url = add_query_arg(
-			array(
-				'public_key'        => $public_key,
-				'search[animal]'    => 'Cat,Dog',
-				'pagination[limit]' => 100,
-				'pagination[page]'  => $page,
-			),
-			self::API_BASE
+		$query = array(
+			'public_key'        => $public_key,
+			'pagination[limit]' => 100,
+			'pagination[page]'  => $page,
 		);
+
+		// Every species unless the shelter chose some. This was hard-coded to
+		// cats and dogs, so a shelter's rabbits and birds never arrived.
+		$species = self::synced_species();
+		if ( $species ) {
+			$query['search[animal]'] = implode( ',', $species );
+		}
+
+		$url = add_query_arg( $query, self::API_BASE );
 
 		$error = new WP_Error( 'fetch_failed', sprintf( 'Page %d: fetch failed', $page ) );
 
@@ -942,6 +947,32 @@ class Petsync_Sync {
 		update_post_meta( $post_id, '_pet_source_image_url', $new_image_url );
 	}
 
+	/**
+	 * The species the sync asks for, as the provider names them. Empty means
+	 * every species.
+	 *
+	 * @return string[]
+	 */
+	public static function synced_species(): array {
+		return array_values( array_filter( array_map( 'strval', (array) ( Petsync_Admin::get_settings()['sync_species'] ?? array() ) ), 'strlen' ) );
+	}
+
+	/**
+	 * Whether a pet's species is one the sync asks for.
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	private static function is_synced_species( int $post_id ): bool {
+		$species = array_map( 'strtolower', self::synced_species() );
+		if ( ! $species ) {
+			return true;
+		}
+
+		$animals = wp_get_object_terms( $post_id, \Petsync\Core\Pet_Visibility::animal_taxonomy(), array( 'fields' => 'names' ) );
+
+		return is_array( $animals ) && (bool) array_intersect( array_map( 'strtolower', $animals ), $species );
+	}
+
 	private function remove_stale_pets( array $api_pets ): int {
 		$api_ids = array_column( $api_pets, 'id' );
 		$removed = 0;
@@ -974,7 +1005,13 @@ class Petsync_Sync {
 						'post_status' => 'draft',
 					)
 				);
-				\Petsync\Core\Pet_Visibility::record( $post_id, \Petsync\Core\Pet_Visibility::LEFT_FEED );
+				// A species the sync no longer asks for leaves the feed too, and
+				// staff should be told that rather than that Petstablished
+				// stopped listing it.
+				\Petsync\Core\Pet_Visibility::record(
+					$post_id,
+					self::is_synced_species( $post_id ) ? \Petsync\Core\Pet_Visibility::LEFT_FEED : \Petsync\Core\Pet_Visibility::SPECIES_NOT_SYNCED
+				);
 				++$removed;
 			}
 		}

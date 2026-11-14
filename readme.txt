@@ -102,7 +102,7 @@ Re-uploading a corrected sheet updates the animals already on the site rather th
 
 = Can I mix pets from a platform, a spreadsheet and the editor? =
 
-Yes. Each pet records where it came from. A sync only ever updates the pets it imported itself, so hand-entered pets are never overwritten and never removed when an animal leaves the platform. Fields on imported pets are read-only in the editor, because the platform is the source of record for them. A synced pet is shown only if its status is one you choose under **Pets → Sync Settings** (Available, Adoption Pending and On Hold by default), and only available pets offer the adoption application. To take a synced pet off the site, hide it on the platform: the next sync republishes one drafted in WordPress.
+Yes. Each pet records where it came from. A sync only ever updates the pets it imported itself, so hand-entered pets are never overwritten and never removed when an animal leaves the platform. Fields on imported pets are read-only in the editor, because the platform is the source of record for them. A synced pet is shown only if its status is one you choose under **Pets → Sync Settings** (Available, Adoption Pending and On Hold by default), and only available pets offer the adoption application. To take a synced pet off the site, hide it on the platform: the next sync republishes one drafted in WordPress. **Species to sync**, on the same screen, limits which animals are synced; empty syncs every species.
 
 = Can I print kennel cards? =
 
