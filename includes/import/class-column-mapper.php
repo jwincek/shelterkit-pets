@@ -176,7 +176,48 @@ class Column_Mapper {
 	}
 
 	/**
-	 * Every column an import can write, for the mapping UI's override dropdown.
+	 * Map a header row from a person's choices, as the preview's dropdowns
+	 * submit them.
+	 *
+	 * Same shape as map(), so the report reads the same either way. A choice
+	 * that names no importable column means "ignore this column".
+	 *
+	 * @param string[]                  $headers Raw header cells, in file order.
+	 * @param array<int|string, string> $choices Column index => canonical column, or ''.
+	 * @return array{mapping: array<int, string>, unmapped: array<int, string>, duplicates: array<int, string>}
+	 */
+	public static function from_choices( array $headers, array $choices ): array {
+		$mapping    = array();
+		$unmapped   = array();
+		$duplicates = array();
+
+		foreach ( array_values( $headers ) as $index => $header ) {
+			$column = (string) ( $choices[ $index ] ?? '' );
+
+			if ( '' === $column || ! Schema::is_importable( $column ) ) {
+				if ( '' !== trim( (string) $header ) ) {
+					$unmapped[ $index ] = (string) $header;
+				}
+				continue;
+			}
+
+			if ( in_array( $column, $mapping, true ) ) {
+				$duplicates[ $index ] = (string) $header;
+				continue;
+			}
+
+			$mapping[ $index ] = $column;
+		}
+
+		return array(
+			'mapping'    => $mapping,
+			'unmapped'   => $unmapped,
+			'duplicates' => $duplicates,
+		);
+	}
+
+	/**
+	 * Every column an import can write, for the preview's mapping dropdowns.
 	 *
 	 * @return string[]
 	 */
