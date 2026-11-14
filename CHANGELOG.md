@@ -69,6 +69,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reads.
 
 ### Fixed
+- A pet's compatibility terms ("Good with dogs" and the rest) were derived
+  before the sync stored the data they come from. A newly synced pet got none,
+  and kept none, since later syncs skip an unchanged pet, so it was missing from
+  every compatibility filter; a changed pet's terms were one sync behind.
+  Updating recomputes every pet's terms once.
 - An export of synced pets could not be imported back: every row failed,
   because the import required a number for `numerical_age` and Petstablished
   writes ages like "6 years, 1 months".

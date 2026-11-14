@@ -33,15 +33,16 @@ class Migrate {
 	 * @var array<int, string>
 	 */
 	private const DESCRIPTIONS = array(
-		1 => 'Rename legacy petstablished_* options and cron hooks to petsync_*',
-		2 => 'Stamp _pet_provider on pets synced before the plugin recorded it',
-		3 => 'Give hand-created pets a status so they reach the archive',
-		4 => 'Consolidate wp_theme template namespaces onto the current one',
-		5 => 'The same again, for the shelterkit-pets rename',
-		6 => 'Apply entity field renames to stored post meta',
-		7 => 'Backfill vcps_pet_attribute terms for every pet (touches all pets)',
-		8 => 'Seed _pet_last_seen so staleness has a baseline (touches all pets)',
-		9 => 'Give the pet taxonomies the vcps_ prefix (keeps their URLs)',
+		1  => 'Rename legacy petstablished_* options and cron hooks to petsync_*',
+		2  => 'Stamp _pet_provider on pets synced before the plugin recorded it',
+		3  => 'Give hand-created pets a status so they reach the archive',
+		4  => 'Consolidate wp_theme template namespaces onto the current one',
+		5  => 'The same again, for the shelterkit-pets rename',
+		6  => 'Apply entity field renames to stored post meta',
+		7  => 'Backfill vcps_pet_attribute terms for every pet (touches all pets)',
+		8  => 'Seed _pet_last_seen so staleness has a baseline (touches all pets)',
+		9  => 'Give the pet taxonomies the vcps_ prefix (keeps their URLs)',
+		10 => 'Backfill vcps_pet_attribute terms again: syncs had skipped them (touches all pets)',
 	);
 
 	/**
