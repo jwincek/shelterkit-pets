@@ -20,6 +20,10 @@ declare( strict_types = 1 );
 
 namespace Petsync\Core;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Config {
 
 	/**

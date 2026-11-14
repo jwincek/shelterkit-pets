@@ -140,6 +140,22 @@ if (( ${#UNEXPECTED[@]} )); then
 	exit 1
 fi
 
+# Every PHP file that ships must refuse to run when requested directly. Plugin
+# Check flags only files with code at the top level, so a file that just
+# declares a class passes it without a guard, which is how six of them shipped
+# that way in 1.6.0. uninstall.php checks WP_UNINSTALL_PLUGIN instead, which is
+# the stronger test for that file, since ABSPATH is defined on every request.
+UNGUARDED=()
+while IFS= read -r -d '' f; do
+	grep -qE "defined\( *'(ABSPATH|WP_UNINSTALL_PLUGIN)' *\)" "$f" || UNGUARDED+=("${f#"$DEST"/}")
+done < <(find "$DEST" -type f -name '*.php' -print0)
+if (( ${#UNGUARDED[@]} )); then
+	echo "Error: ${#UNGUARDED[@]} PHP file(s) in the build have no direct-access guard:" >&2
+	printf '  %s\n' "${UNGUARDED[@]}" >&2
+	echo "Add  if ( ! defined( 'ABSPATH' ) ) { exit; }  after any declare and namespace lines." >&2
+	exit 1
+fi
+
 # Likewise, a missing runtime file would ship a broken plugin.
 MISSING=()
 for f in "$SLUG.php" readme.txt uninstall.php LICENSE config includes blocks; do

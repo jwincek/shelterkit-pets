@@ -17,6 +17,10 @@ declare( strict_types = 1 );
 
 namespace Petsync\Abilities;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use Petsync\Core\Config;
 
 class Provider {
