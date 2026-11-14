@@ -63,6 +63,67 @@ class Exporter {
 	}
 
 	/**
+	 * Undo esc_csv_field() on a cell read back in.
+	 *
+	 * Only the exact prefix it adds is removed: an apostrophe followed by a
+	 * formula trigger. Without this, `+Plus` came back as `'+Plus` and stayed
+	 * that way. An apostrophe a person typed in front of anything else, as in
+	 * `'Twas`, is data and stays.
+	 *
+	 * @param string $value Cell value.
+	 */
+	public static function unescape_csv_field( string $value ): string {
+		if ( strlen( $value ) > 1 && "'" === $value[0] && in_array( $value[1], self::FORMULA_TRIGGERS, true ) ) {
+			return substr( $value, 1 );
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Every term a pet has in a taxonomy, by name or by slug.
+	 *
+	 * The hydrated entity carries only the first, which is what a pet card
+	 * shows. An export that used it dropped a mixed breed's second breed and
+	 * all but one colour, which is most pets: 45 of VCHS's 54 listed pets have
+	 * more than one colour.
+	 *
+	 * @param int    $post_id  Post ID.
+	 * @param string $taxonomy Taxonomy.
+	 * @param string $field    'names' or 'slugs'.
+	 * @return string[]
+	 */
+	private static function terms( int $post_id, string $taxonomy, string $field = 'names' ): array {
+		$terms = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => $field ) );
+
+		return is_wp_error( $terms ) ? array() : array_map( 'strval', $terms );
+	}
+
+	/**
+	 * A taxonomy column's terms, or null if the column is not a taxonomy's.
+	 *
+	 * Covers the `…Slug` twins a full export carries as well.
+	 *
+	 * @param string $column  Column name.
+	 * @param int    $post_id Post ID.
+	 * @return string[]|null
+	 */
+	private static function taxonomy_values( string $column, int $post_id ): ?array {
+		$taxonomies = Schema::taxonomy_columns();
+
+		if ( isset( $taxonomies[ $column ] ) ) {
+			return self::terms( $post_id, $taxonomies[ $column ] );
+		}
+
+		$base = substr( $column, 0, -strlen( 'Slug' ) );
+		if ( str_ends_with( $column, 'Slug' ) && isset( $taxonomies[ $base ] ) ) {
+			return self::terms( $post_id, $taxonomies[ $base ], 'slugs' );
+		}
+
+		return null;
+	}
+
+	/**
 	 * Flatten one hydrated pet to the given columns.
 	 *
 	 * Falls back to post meta for anything the entity does not carry.
@@ -81,6 +142,20 @@ class Exporter {
 		$row    = array();
 
 		foreach ( $columns as $column ) {
+			if ( $post_id ) {
+				$terms = self::taxonomy_values( $column, $post_id );
+				if ( null !== $terms ) {
+					$row[ $column ] = implode( Schema::LIST_SEPARATOR, $terms );
+					continue;
+				}
+
+				// Readable text, not the display HTML. See Description.
+				if ( 'description' === $column ) {
+					$row[ $column ] = Description::to_cell( (string) get_post_field( 'post_content', $post_id, 'raw' ) );
+					continue;
+				}
+			}
+
 			$value = $pet[ $column ] ?? null;
 
 			if ( null === $value && $post_id && Schema::is_importable( $column ) ) {
@@ -97,7 +172,7 @@ class Exporter {
 					static fn( $v ) => is_array( $v ) ? ( $v['url'] ?? $v['name'] ?? '' ) : $v,
 					$value
 				);
-				$value = implode( '|', array_filter( array_map( 'strval', $flat ), 'strlen' ) );
+				$value = implode( Schema::LIST_SEPARATOR, array_filter( array_map( 'strval', $flat ), 'strlen' ) );
 			}
 
 			$row[ $column ] = (string) $value;
@@ -219,6 +294,20 @@ class Exporter {
 			// same columns rather than JSON quietly having fewer.
 			$record = array();
 			foreach ( $columns as $column ) {
+				// Every term, as a list: keeping lists as lists is why JSON is offered.
+				$terms = self::taxonomy_values( $column, (int) $id );
+				if ( null !== $terms ) {
+					$record[ $column ] = $terms;
+					continue;
+				}
+
+				// The stored description, which is what can be edited and
+				// imported. A full export keeps the display HTML.
+				if ( 'description' === $column && Schema::PORTABLE === $mode ) {
+					$record[ $column ] = (string) get_post_field( 'post_content', (int) $id, 'raw' );
+					continue;
+				}
+
 				if ( array_key_exists( $column, $pet ) ) {
 					$record[ $column ] = $pet[ $column ];
 					continue;

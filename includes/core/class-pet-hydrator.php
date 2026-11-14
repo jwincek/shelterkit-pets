@@ -603,7 +603,7 @@ class Pet_Hydrator {
 			'gallery_count' => count( self::compute_gallery( $id, $entity ) ),
 			'is_new' => self::compute_is_new( $id, $post ),
 			'favorited' => in_array( $id, \Petsync_Helpers::get_favorites(), true ),
-			'description' => wp_kses_post( wpautop( $post->post_content ) ),
+			'description' => wp_kses_post( self::compute_description( $post->post_content ) ),
 			'videos' => self::compute_videos( $entity ),
 			'is_bonded_pair' => self::compute_is_bonded_pair( $entity ),
 			'bonded_pair_names' => self::compute_bonded_pair_names( $id, $entity ),
@@ -717,6 +717,26 @@ class Pet_Hydrator {
 		}
 		// Fall back to the full image (better than nothing).
 		return self::compute_image( $id );
+	}
+
+	/**
+	 * The description as display HTML.
+	 *
+	 * wpautop() is for classic content. Run over block markup it wraps each
+	 * delimiter comment in a paragraph of its own, so a description written in
+	 * the block editor displayed an empty paragraph around every real one.
+	 * Block markup already carries its paragraphs, so its delimiters are only
+	 * removed. do_blocks() is not used: a dynamic block in a description would
+	 * then render during hydration, and could hydrate this same pet again.
+	 *
+	 * @param string $content post_content.
+	 */
+	private static function compute_description( string $content ): string {
+		if ( ! has_blocks( $content ) ) {
+			return wpautop( $content );
+		}
+
+		return trim( (string) preg_replace( '#<!--\s+/?wp:.*?-->\s*#s', '', $content ) );
 	}
 
 	private static function compute_tagline( array $entity ): string {

@@ -96,9 +96,9 @@ If you already keep your animals in a spreadsheet, **Pets → Import** will take
 
 Yes. Save it as CSV and go to **Pets → Import**. Column headings are matched loosely, so "Good with dogs?" finds the right field and you do not have to rename anything; only a name column is required. You get a preview showing exactly what will be added, changed or skipped — including any heading that could not be matched — and nothing is written until you confirm.
 
-Re-uploading a corrected sheet updates the animals already on the site rather than duplicating them, matching on microchip number. Imported pets count as hand-entered, so a later sync from a connected platform will never overwrite or unpublish them.
+Re-uploading a corrected sheet updates the animals already on the site rather than duplicating them, matching on microchip number or, in a file exported from this site, on each pet's id. Imported pets count as hand-entered, so a later sync from a connected platform will never overwrite or unpublish them. A pet synced from a platform is never changed by an import; edit it on the platform.
 
-**Pets → Export** produces a file in the same format, so an export can be edited in a spreadsheet and imported straight back.
+**Pets → Export** produces a file in the same format, so an export can be edited in a spreadsheet and imported straight back. Descriptions come out as plain paragraphs, and a pet's several breeds or colours are separated by `|`.
 
 = Can I mix pets from a platform, a spreadsheet and the editor? =
 
