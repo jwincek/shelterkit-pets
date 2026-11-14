@@ -28,6 +28,9 @@ namespace Petsync\Import;
 
 use Petsync\Core\Config;
 use Petsync\Core\Pet_Hydrator;
+use Petsync\Core\Provider_Map;
+use Petsync\Export\Description;
+use Petsync\Export\Exporter;
 use Petsync\Export\Schema;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -129,9 +132,21 @@ class Importer {
 	private static function associate( array $row, array $mapping ): array {
 		$out = array();
 		foreach ( $mapping as $index => $column ) {
-			$out[ $column ] = trim( (string) ( $row[ $index ] ?? '' ) );
+			// Undo the export's formula protection, or it becomes part of the value.
+			$out[ $column ] = Exporter::unescape_csv_field( trim( (string) ( $row[ $index ] ?? '' ) ) );
 		}
 		return $out;
+	}
+
+	/**
+	 * The storage type a column declares, such as 'attachment_ids'.
+	 *
+	 * @param string $column Canonical column.
+	 */
+	private static function field_type( string $column ): string {
+		$entity = self::entity();
+
+		return (string) ( $entity['fields'][ $column ]['type'] ?? $entity['api_fields'][ $column ]['type'] ?? 'string' );
 	}
 
 	/**
@@ -171,12 +186,32 @@ class Importer {
 				);
 			}
 
-			if ( 'numerical_age' === $column && ! is_numeric( $value ) ) {
-				$errors[] = sprintf(
-					/* translators: %s: the cell's value. */
-					__( 'numerical_age: "%s" is not a number.', 'shelterkit-pets' ),
-					$value
+			// numerical_age is deliberately not checked for a number, despite its
+			// name. It is shown as written, and Petstablished writes ages like
+			// "6 years, 1 months". A check refused every pet in a synced
+			// shelter's export.
+
+			// A gallery ID from another site's file names some unrelated
+			// attachment here, or nothing. Neither belongs on a pet's page.
+			if ( 'attachment_ids' === self::field_type( $column ) ) {
+				$bad = array_filter(
+					Schema::split_list( $value ),
+					static fn( string $id ): bool => ! ctype_digit( $id ) || ! wp_attachment_is_image( (int) $id )
 				);
+
+				if ( $bad ) {
+					$errors[] = sprintf(
+						/* translators: 1: column name, 2: comma-separated attachment IDs. */
+						_n(
+							'%1$s: %2$s is not an image in this site\'s Media Library.',
+							'%1$s: %2$s are not images in this site\'s Media Library.',
+							count( $bad ),
+							'shelterkit-pets'
+						),
+						$column,
+						implode( ', ', $bad )
+					);
+				}
 			}
 		}
 
@@ -204,8 +239,15 @@ class Importer {
 	 *
 	 * @param string $column Canonical column.
 	 * @param string $value  Raw cell.
+	 * @return string|int[]
 	 */
-	private static function normalise_value( string $column, string $value ): string {
+	private static function normalise_value( string $column, string $value ): string|array {
+		// The export writes a gallery as 11|12. Stored as that string, the
+		// field's sanitiser, which expects a list, emptied the gallery.
+		if ( 'attachment_ids' === self::field_type( $column ) ) {
+			return array_map( 'intval', Schema::split_list( $value ) );
+		}
+
 		$type = self::entity()['api_fields'][ $column ]['type'] ?? 'string';
 
 		if ( 'tristate' === $type ) {
@@ -228,35 +270,134 @@ class Importer {
 	/**
 	 * Find an existing pet this row refers to.
 	 *
-	 * Matches on microchip_id, which is the only field in the schema that is
-	 * genuinely unique per animal. Name is not: shelters have several Lunas.
+	 * The id column of a file this site exported names the exact pet a row
+	 * came from, so it wins, as long as the pet's microchip does not say it is
+	 * a different animal. Without it, a pet with no microchip was added again
+	 * every time its file was re-imported. A file from another site still
+	 * matches pets here by id, which is why the caller notes a name mismatch.
+	 *
+	 * Otherwise the microchip, the only field genuinely unique per animal.
+	 * Name is not: shelters have several Lunas. But a microchip is not unique
+	 * per post: a re-listed animal can have an old draft copy, as 50 animals
+	 * at VCHS do. So every pet with the number is found, a listed one is
+	 * preferred, then the most recently changed, and the count is reported.
 	 *
 	 * @param array<string, string> $data Canonical column => value.
+	 * @return array{id: int, by: string, also: int[]} by is 'id', 'microchip'
+	 *         or ''; also lists other pets with the same microchip.
 	 */
-	private static function find_existing( array $data ): int {
+	private static function find_existing( array $data ): array {
 		$chip = trim( $data['microchip_id'] ?? '' );
-		if ( '' === $chip ) {
-			return 0;
+
+		$id   = trim( $data['id'] ?? '' );
+		$post = ctype_digit( $id ) ? get_post( (int) $id ) : null;
+
+		if ( $post && 'vcps_pet' === $post->post_type && 'trash' !== $post->post_status ) {
+			$their_chip = self::chip_of( $post->ID );
+
+			if ( '' === $chip || '' === $their_chip || $chip === $their_chip ) {
+				return array(
+					'id'   => $post->ID,
+					'by'   => 'id',
+					'also' => array(),
+				);
+			}
 		}
 
-		$found = get_posts(
+		$found = '' === $chip ? array() : self::pets_with_chip( $chip );
+
+		return array(
+			'id'   => (int) ( $found[0] ?? 0 ),
+			'by'   => $found ? 'microchip' : '',
+			'also' => array_slice( $found, 1 ),
+		);
+	}
+
+	/**
+	 * A pet's microchip number, wherever it is stored.
+	 *
+	 * In meta when it was entered or imported, in the provider snapshot when
+	 * it was synced. Read directly rather than hydrated, because the hydrator
+	 * only serves published pets and a match can be a draft.
+	 *
+	 * @param int $id Post ID.
+	 */
+	private static function chip_of( int $id ): string {
+		$meta = trim( (string) get_post_meta( $id, self::prefix() . 'microchip_id', true ) );
+		if ( '' !== $meta ) {
+			return $meta;
+		}
+
+		$provider = (string) get_post_meta( $id, self::prefix() . 'provider', true );
+		$key      = '' === $provider ? null : Provider_Map::key_for( $provider, 'microchip_id' );
+		if ( null === $key ) {
+			return '';
+		}
+
+		$snapshot = json_decode( (string) get_post_meta( $id, self::prefix() . 'api_response', true ), true );
+
+		return is_array( $snapshot ) ? trim( (string) ( $snapshot[ $key ] ?? '' ) ) : '';
+	}
+
+	/**
+	 * Every pet with this microchip, best match first.
+	 *
+	 * The snapshot is searched too: a synced pet's number lives only there,
+	 * so a shelter's own sheet never matched a synced pet, and added a copy
+	 * where it should have said the pet is managed on its platform. A text
+	 * search of a JSON snapshot can match a stale value, so each candidate is
+	 * confirmed against chip_of().
+	 *
+	 * @param string $chip Microchip number.
+	 * @return int[] Listed pets first, then the most recently modified.
+	 */
+	private static function pets_with_chip( string $chip ): array {
+		$clauses = array(
+			'relation' => 'OR',
+			array(
+				'key'   => self::prefix() . 'microchip_id',
+				'value' => $chip,
+			),
+		);
+
+		$key = Provider_Map::key_for( \Petsync_Sync::PROVIDER, 'microchip_id' );
+		if ( null !== $key ) {
+			$clauses[] = array(
+				'key'     => self::prefix() . 'api_response',
+				'value'   => wp_json_encode( $key ) . ':' . wp_json_encode( $chip ),
+				'compare' => 'LIKE',
+			);
+		}
+
+		$ids = get_posts(
 			array(
 				'post_type'        => 'vcps_pet',
 				'post_status'      => 'any',
-				'numberposts'      => 1,
+				'numberposts'      => -1,
 				'fields'           => 'ids',
+				'orderby'          => 'modified',
+				'order'            => 'DESC',
 				'suppress_filters' => false,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- matching on the one unique field is the point.
-				'meta_query'       => array(
-					array(
-						'key'   => self::prefix() . 'microchip_id',
-						'value' => $chip,
-					),
-				),
+				'meta_query'       => $clauses,
 			)
 		);
 
-		return (int) ( $found[0] ?? 0 );
+		$ids = array_values( array_filter( array_map( 'intval', $ids ), static fn( int $id ): bool => self::chip_of( $id ) === $chip ) );
+
+		// Listed first; usort keeps the modified order within each group.
+		usort( $ids, static fn( int $a, int $b ): int => (int) ( 'publish' !== get_post_status( $a ) ) <=> (int) ( 'publish' !== get_post_status( $b ) ) );
+
+		return $ids;
+	}
+
+	/**
+	 * A pet as a person would recognise it in a note: #123 "Luna".
+	 *
+	 * @param int $id Post ID.
+	 */
+	private static function describe( int $id ): string {
+		return sprintf( '#%d "%s"', $id, get_post_field( 'post_title', $id, 'raw' ) );
 	}
 
 	/**
@@ -302,6 +443,9 @@ class Importer {
 			'rows'       => array(),
 		);
 
+		// Microchip number => the row it first appeared on.
+		$seen_chips = array();
+
 		foreach ( $parsed['rows'] as $offset => $raw ) {
 			// +2: one for the header row, one because humans count from 1. A
 			// row number that does not match what the shelter sees in Excel is
@@ -327,34 +471,76 @@ class Importer {
 			$data   = self::associate( $raw, $mapping );
 			$errors = array_merge( $errors, self::validate( $data ) );
 
+			// The same animal twice in one file. Checked here, in the code both
+			// the preview and the import run, because only the import could see
+			// it otherwise: the preview found no match for either row and said
+			// "2 to add", then the import added the first and overwrote it with
+			// the second.
+			$chip = trim( $data['microchip_id'] ?? '' );
+			if ( '' !== $chip && isset( $seen_chips[ $chip ] ) ) {
+				$errors[] = sprintf(
+					/* translators: %d: row number. */
+					__( 'Same microchip number as row %d. Each animal can only appear once in a file.', 'shelterkit-pets' ),
+					$seen_chips[ $chip ]
+				);
+			} elseif ( '' !== $chip ) {
+				$seen_chips[ $chip ] = $line;
+			}
+
 			if ( $errors ) {
 				++$report['failed'];
-				$report['rows'][] = array(
-					'line'   => $line,
-					'name'   => $data['name'] ?? '',
-					'action' => 'error',
-					'errors' => $errors,
-				);
+				$report['rows'][] = self::report_row( $line, $data['name'] ?? '', 'error', 0, $errors );
 				continue;
 			}
 
-			$existing = self::find_existing( $data );
+			$match    = self::find_existing( $data );
+			$existing = $match['id'];
 			$action   = 'create';
+			$notes    = array();
+
+			if ( $match['also'] ) {
+				$notes[] = sprintf(
+					/* translators: 1: a pet, as #123 "Luna", 2: other pets' IDs. */
+					__( 'Other pets have this microchip number too (%2$s). This row matches %1$s, the listed or most recently changed one.', 'shelterkit-pets' ),
+					self::describe( $existing ),
+					implode( ', ', array_map( static fn( int $id ): string => '#' . $id, $match['also'] ) )
+				);
+			}
 
 			if ( $existing ) {
-				if ( self::ON_MATCH_SKIP === $on_match ) {
-					++$report['skipped'];
-					$report['rows'][] = array(
-						'line'   => $line,
-						'name'   => $data['name'],
-						'action' => 'skip',
-						'id'     => $existing,
-						'errors' => array(),
+				$provider = (string) get_post_meta( $existing, self::prefix() . 'provider', true );
+
+				// A synced pet is rewritten from its platform on the next sync,
+				// so an update here would be undone without a trace. Adding a
+				// separate hand-entered copy is still allowed, if asked for.
+				$synced = '' !== $provider && self::ON_MATCH_DUPLICATE !== $on_match;
+				if ( $synced ) {
+					$notes[] = sprintf(
+						/* translators: 1: a pet, as #123 "Luna", 2: platform name, such as Petstablished. */
+						__( 'Matches %1$s, which is synced from %2$s. Change it there: the next sync would undo an import.', 'shelterkit-pets' ),
+						self::describe( $existing ),
+						(string) ( Provider_Map::get( $provider )['label'] ?? $provider )
 					);
+				}
+
+				if ( $synced || self::ON_MATCH_SKIP === $on_match ) {
+					++$report['skipped'];
+					$report['rows'][] = self::report_row( $line, $data['name'], 'skip', $existing, array(), $notes );
 					continue;
 				}
+
 				if ( self::ON_MATCH_UPDATE === $on_match ) {
 					$action = 'update';
+
+					$current = (string) get_post_field( 'post_title', $existing, 'raw' );
+					if ( 'id' === $match['by'] && 0 !== strcasecmp( trim( $current ), trim( $data['name'] ) ) ) {
+						$notes[] = sprintf(
+							/* translators: 1: a pet, as #123 "Luna", 2: the name in the file. */
+							__( 'Matched by id to %1$s, and renames it "%2$s". If this file came from another site, its ids belong to different pets here.', 'shelterkit-pets' ),
+							self::describe( $existing ),
+							$data['name']
+						);
+					}
 				}
 			}
 
@@ -362,12 +548,7 @@ class Importer {
 
 			if ( $commit && is_wp_error( $post_id ) ) {
 				++$report['failed'];
-				$report['rows'][] = array(
-					'line'   => $line,
-					'name'   => $data['name'],
-					'action' => 'error',
-					'errors' => array( $post_id->get_error_message() ),
-				);
+				$report['rows'][] = self::report_row( $line, $data['name'], 'error', 0, array( $post_id->get_error_message() ) );
 				continue;
 			}
 
@@ -377,16 +558,35 @@ class Importer {
 				++$report['created'];
 			}
 
-			$report['rows'][] = array(
-				'line'   => $line,
-				'name'   => $data['name'],
-				'action' => $action,
-				'id'     => (int) $post_id,
-				'errors' => array(),
-			);
+			// A preview has no new post yet, but an update already knows its pet.
+			$id = $commit ? (int) $post_id : ( 'update' === $action ? $existing : 0 );
+
+			$report['rows'][] = self::report_row( $line, $data['name'], $action, $id, array(), $notes );
 		}
 
 		return $report;
+	}
+
+	/**
+	 * One row of the report.
+	 *
+	 * @param int      $line   Row number as the spreadsheet shows it.
+	 * @param string   $name   The row's name cell.
+	 * @param string   $action create, update, skip, or error.
+	 * @param int      $id     The pet created, updated or matched, or 0.
+	 * @param string[] $errors Why the row was refused.
+	 * @param string[] $notes  What a person should know about a row that was not.
+	 * @return array<string, mixed>
+	 */
+	private static function report_row( int $line, string $name, string $action, int $id, array $errors, array $notes = array() ): array {
+		return array(
+			'line'   => $line,
+			'name'   => $name,
+			'action' => $action,
+			'id'     => $id,
+			'errors' => $errors,
+			'notes'  => $notes,
+		);
 	}
 
 	/**
@@ -399,17 +599,26 @@ class Importer {
 	 */
 	private static function write( array $data, int $existing, array $taxonomies ): int|\WP_Error {
 		$postarr = array(
-			'post_type'    => 'vcps_pet',
-			'post_status'  => 'publish',
-			'post_title'   => sanitize_text_field( $data['name'] ),
-			'post_content' => wp_kses_post( $data['description'] ?? '' ),
+			'post_type'  => 'vcps_pet',
+			'post_title' => sanitize_text_field( $data['name'] ),
 		);
 
+		// Only when the sheet has the column, as with every other field. A
+		// three-column sheet that updated compatibility used to empty every
+		// matched pet's description.
+		if ( array_key_exists( 'description', $data ) ) {
+			$postarr['post_content'] = Description::from_cell( $data['description'] );
+		}
+
+		// wp_insert_post() unslashes what it is given, so unslashed input lost
+		// every backslash, including the escapes in block attributes' JSON.
 		if ( $existing ) {
+			// Status is left as it was: updating a draft must not publish it.
 			$postarr['ID'] = $existing;
-			$post_id       = wp_update_post( $postarr, true );
+			$post_id       = wp_update_post( wp_slash( $postarr ), true );
 		} else {
-			$post_id = wp_insert_post( $postarr, true );
+			$postarr['post_status'] = 'publish';
+			$post_id                = wp_insert_post( wp_slash( $postarr ), true );
 		}
 
 		if ( is_wp_error( $post_id ) ) {
@@ -430,18 +639,21 @@ class Importer {
 				continue;
 			}
 
-			update_post_meta( $post_id, $prefix . $column, self::normalise_value( $column, $value ) );
+			// Slashed for the same reason: update_post_meta() unslashes too.
+			update_post_meta( $post_id, $prefix . $column, wp_slash( self::normalise_value( $column, $value ) ) );
 		}
 
 		foreach ( $taxonomies as $column => $taxonomy ) {
-			$term = trim( $data[ $column ] ?? '' );
-			if ( '' === $term || ! taxonomy_exists( $taxonomy ) ) {
+			// Every term the cell lists: a mixed breed has two, most pets
+			// several colours.
+			$terms = Schema::split_list( $data[ $column ] ?? '' );
+			if ( ! $terms || ! taxonomy_exists( $taxonomy ) ) {
 				continue;
 			}
 			// Terms arrive as names a person typed. wp_set_object_terms creates
 			// what does not exist, which is what a shelter starting from a
 			// spreadsheet needs — their breeds are not our list.
-			wp_set_object_terms( $post_id, sanitize_text_field( $term ), $taxonomy );
+			wp_set_object_terms( $post_id, array_map( 'sanitize_text_field', $terms ), $taxonomy );
 		}
 
 		// Attribute terms are derived from the hydrated entity, so they have to

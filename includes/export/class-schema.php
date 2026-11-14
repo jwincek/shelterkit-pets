@@ -35,9 +35,16 @@ class Schema {
 	public const FULL = 'full';
 
 	/**
-	 * Identity and display columns. `id` is the local post ID and is
-	 * informational on import; `name` is the post title; `description` is the
-	 * post content.
+	 * Separates the values in a cell that holds several: every term of a
+	 * taxonomy, every image in a gallery. Chosen because no breed, colour or
+	 * attachment ID contains one, and a spreadsheet leaves it alone.
+	 */
+	public const LIST_SEPARATOR = '|';
+
+	/**
+	 * Identity and display columns. `id` is the local post ID, which an import
+	 * matches on when a row has no microchip that does; `name` is the post
+	 * title; `description` is the post content.
 	 *
 	 * `description` is a COMPUTED field, so it does not arrive via
 	 * editable_fields — but omitting it meant a portable export carried every
@@ -116,6 +123,16 @@ class Schema {
 			$map[ $column ] = $config['taxonomy'] ?? '';
 		}
 		return $map;
+	}
+
+	/**
+	 * The values in a list cell, in order, without blanks.
+	 *
+	 * @param string $cell Cell contents.
+	 * @return string[]
+	 */
+	public static function split_list( string $cell ): array {
+		return array_values( array_filter( array_map( 'trim', explode( self::LIST_SEPARATOR, $cell ) ), 'strlen' ) );
 	}
 
 	/**

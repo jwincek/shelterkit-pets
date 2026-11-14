@@ -166,7 +166,8 @@ class Admin {
 								<option value="<?php echo esc_attr( Importer::ON_MATCH_SKIP ); ?>"><?php esc_html_e( 'Leave it alone', 'shelterkit-pets' ); ?></option>
 								<option value="<?php echo esc_attr( Importer::ON_MATCH_DUPLICATE ); ?>"><?php esc_html_e( 'Add another', 'shelterkit-pets' ); ?></option>
 							</select>
-							<p class="description"><?php esc_html_e( 'Pets are matched on microchip number. Rows without one are always added.', 'shelterkit-pets' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Pets are matched on microchip number, or else on the id column of a file exported from this site. Other rows are added.', 'shelterkit-pets' ); ?></p>
+							<p class="description"><?php esc_html_e( 'A pet synced from a connected platform is never changed by an import. Edit it on the platform instead.', 'shelterkit-pets' ); ?></p>
 						</td>
 					</tr>
 				</table>
@@ -250,7 +251,7 @@ class Admin {
 					<td><?php echo (int) $row['line']; ?></td>
 					<td><?php echo esc_html( (string) $row['name'] ); ?></td>
 					<td><?php echo esc_html( (string) $row['action'] ); ?></td>
-					<td><?php echo esc_html( implode( ' ', (array) $row['errors'] ) ); ?></td>
+					<td><?php echo esc_html( implode( ' ', array_merge( (array) $row['errors'], (array) ( $row['notes'] ?? array() ) ) ) ); ?></td>
 				</tr>
 			<?php endforeach; ?>
 			</tbody>

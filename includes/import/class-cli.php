@@ -32,7 +32,9 @@ class CLI {
 	 * : Actually write. Without this, nothing is created or changed.
 	 *
 	 * [--on-match=<action>]
-	 * : What to do when a row's microchip_id matches an existing pet.
+	 * : What to do when a row matches an existing pet, by microchip_id or by
+	 * the id column of a file this site exported. A pet synced from a platform
+	 * is skipped unless this is `duplicate`.
 	 * ---
 	 * default: update
 	 * options:
@@ -91,6 +93,9 @@ class CLI {
 		foreach ( $report['rows'] as $row ) {
 			if ( $row['errors'] ) {
 				\WP_CLI::warning( sprintf( 'Row %d (%s): %s', $row['line'], $row['name'], implode( ' ', $row['errors'] ) ) );
+			} elseif ( ! empty( $row['notes'] ) ) {
+				// Always shown: a note explains a skip, or flags an id match worth checking.
+				\WP_CLI::log( sprintf( '  Row %d: %s — %s. %s', $row['line'], $row['name'], $row['action'], implode( ' ', $row['notes'] ) ) );
 			} elseif ( ! empty( $assoc_args['verbose'] ) ) {
 				\WP_CLI::log( sprintf( '  Row %d: %s — %s', $row['line'], $row['name'], $row['action'] ) );
 			}

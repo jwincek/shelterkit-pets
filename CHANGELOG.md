@@ -23,6 +23,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tax_query` or a call such as `get_the_terms()`, needs the new name, and so
   does a `?pet_breed=` query-string link, which only sites without pretty
   permalinks used.
+- **Descriptions export as plain paragraphs.** The CSV export used to write a
+  description as HTML, with Petstablished's apostrophes as `&#039;`. It now
+  writes paragraphs separated by a blank line, and an import turns them back
+  into paragraphs in the editor's own format. A description with a list, a
+  link or other structure travels as its markup, so nothing is lost.
+- **Every breed and colour is exported, not just the first.** A cell lists
+  them separated by `|`, and the import reads them the same way. In JSON they
+  are lists.
+- **Re-importing an export no longer duplicates pets without a microchip.** A
+  row is matched on the `id` column of a file this site exported, unless the
+  pet's microchip says it is a different animal; otherwise on its microchip.
+  The preview notes an id match whose name differs, since a file from another
+  site would match unrelated pets. When several pets share a microchip, as a
+  re-listed animal's old draft copy does, the listed one is matched and the
+  preview names the others.
+- **An import no longer changes a pet synced from a platform.** The next sync
+  would have undone it. Such rows are skipped with a note saying to edit the
+  pet on the platform. A synced pet's microchip is now found in its provider
+  data, so a shelter's own sheet no longer adds a copy of a synced pet.
+
+### Fixed
+- An export of synced pets could not be imported back: every row failed,
+  because the import required a number for `numerical_age` and Petstablished
+  writes ages like "6 years, 1 months".
+- Re-importing an export emptied every pet's curated gallery.
+- An import updating pets from a sheet without a description column emptied
+  their descriptions.
+- An import that updated a draft pet published it.
+- A description written in the block editor came back from an export with its
+  paragraphs broken, and displayed with an empty paragraph around each one.
+- A value the export protected from Excel, such as a name starting with `+` or
+  `-`, came back from an import with an apostrophe in front of it.
+- The same microchip on two rows of one file: the preview promised two new
+  pets, then the import added one and overwrote it with the second. Both now
+  report the second row as an error.
+- Backslashes in imported values were dropped.
 
 ## [1.6.0] - 2026-11-06
 
