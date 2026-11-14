@@ -350,7 +350,7 @@ add_action( 'plugins_loaded', 'petsync_init' );
  * plugin's DATA version and is deliberately independent of the release version
  * in the plugin header — most releases change no stored data at all.
  */
-define( 'PETSYNC_DB_VERSION', 9 );
+define( 'PETSYNC_DB_VERSION', 10 );
 
 /**
  * The ordered migration list.
@@ -364,21 +364,26 @@ define( 'PETSYNC_DB_VERSION', 9 );
  */
 function petsync_get_migrations(): array {
 	return array(
-		1 => 'petsync_migrate_1_option_names',
-		2 => 'petsync_migrate_2_provider_meta',
-		3 => 'petsync_migrate_3_default_status',
-		4 => 'petsync_migrate_4_template_namespace',
+		1  => 'petsync_migrate_1_option_names',
+		2  => 'petsync_migrate_2_provider_meta',
+		3  => 'petsync_migrate_3_default_status',
+		4  => 'petsync_migrate_4_template_namespace',
 		// The same callable again, deliberately. It is driven entirely by
 		// Petsync_Templates::THEME_NAMESPACE and LEGACY_NAMESPACES, so the
 		// shelter-pets -> shelterkit-pets rename needs no new logic — only a
 		// new version, because installs already at 4 will never re-run 4.
 		//
 		// Point any future rename at this same callable in the same way.
-		5 => 'petsync_migrate_4_template_namespace',
-		6 => 'petsync_migrate_6_field_renames',
-		7 => 'petsync_migrate_7_backfill_attribute_terms',
-		8 => 'petsync_migrate_8_seed_last_seen',
-		9 => 'petsync_migrate_9_taxonomy_prefix',
+		5  => 'petsync_migrate_4_template_namespace',
+		6  => 'petsync_migrate_6_field_renames',
+		7  => 'petsync_migrate_7_backfill_attribute_terms',
+		8  => 'petsync_migrate_8_seed_last_seen',
+		9  => 'petsync_migrate_9_taxonomy_prefix',
+		// Migration 7's callable again, as 5 reuses 4. Until #125 the sync
+		// derived a pet's compatibility terms before storing the data they come
+		// from, so every pet first synced since then has none, and every pet
+		// changed since has its previous terms. The backfill is the same.
+		10 => 'petsync_migrate_7_backfill_attribute_terms',
 	);
 }
 
@@ -841,8 +846,11 @@ function petsync_migrate_6_field_renames(): bool {
  * stays invisible to the archive's compatibility filter — which queries the
  * taxonomy, not the meta — while its own page advertises the opposite.
  *
- * Synced pets would be repaired by the next sync anyway; manual pets would
- * never be, because nothing re-saves them.
+ * Manual pets would never be repaired otherwise, because nothing re-saves
+ * them. This once said synced pets would be repaired by the next sync. They
+ * were not: a sync skips a pet whose data has not changed, and until #125 it
+ * derived the terms before storing the data they come from. Migration 10 runs
+ * this backfill again for that reason.
  *
  * @return bool True when the backfill completed.
  */

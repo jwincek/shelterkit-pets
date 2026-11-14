@@ -578,6 +578,7 @@ class Petsync_Sync {
 			$this->update_pet_taxonomies( $post_id, $data );
 			$this->maybe_set_featured_image( $post_id, $data );
 			$this->store_api_snapshot( $post_id, $data, $api_hash );
+			$this->update_attribute_terms( $post_id );
 			return 'updated';
 		}
 
@@ -590,6 +591,7 @@ class Petsync_Sync {
 		$this->update_pet_taxonomies( $post_id, $data );
 		$this->maybe_set_featured_image( $post_id, $data );
 		$this->store_api_snapshot( $post_id, $data, $api_hash );
+		$this->update_attribute_terms( $post_id );
 		return 'created';
 	}
 
@@ -761,8 +763,9 @@ class Petsync_Sync {
 	 * Handles:
 	 * 1. Standard faceted taxonomies (animal, breed, age, etc.) for filtering.
 	 * 2. Secondary breed / secondary color as additional terms.
-	 * 3. Boolean attribute terms in vcps_pet_attribute taxonomy — replaces meta_query
-	 *    filtering with much faster tax_query filtering.
+	 *
+	 * Not the attribute terms: they come from the stored snapshot, so
+	 * update_attribute_terms() runs after it is written.
 	 */
 	/**
 	 * Single-value taxonomy mappings: raw API key → taxonomy.
@@ -808,10 +811,22 @@ class Petsync_Sync {
 				wp_set_object_terms( $post_id, sanitize_text_field( (string) $value ), $taxonomy, true );
 			}
 		}
+	}
 
-		// Boolean attributes → vcps_pet_attribute taxonomy terms. Derived from the
-		// hydrated entity rather than from $data, so the term and the canonical
-		// field cannot disagree — see CPT_Registry::sync_attribute_terms().
+	/**
+	 * Compatibility attributes → vcps_pet_attribute terms.
+	 *
+	 * Derived from the hydrated entity rather than from $data, so the term and
+	 * the canonical field cannot disagree; see
+	 * CPT_Registry::sync_attribute_terms(). A synced pet hydrates from its
+	 * snapshot, so this must run after store_api_snapshot(). It used to run
+	 * before, from update_pet_taxonomies(): a new pet got no terms, and since
+	 * later syncs skip an unchanged pet, kept none, while a changed pet got
+	 * terms from its previous snapshot.
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	private function update_attribute_terms( int $post_id ): void {
 		\Petsync\Core\CPT_Registry::sync_attribute_terms( $post_id );
 	}
 
