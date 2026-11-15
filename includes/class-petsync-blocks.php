@@ -204,12 +204,40 @@ class Petsync_Blocks {
 			}
 		}
 
-		// Direct field lookup from hydrated entity.
-		$value = $pet[ $key ] ?? null;
+		return self::format_binding_value( $key, $pet[ $key ] ?? null );
+	}
 
-		// Format for display.
+	/**
+	 * A hydrated value as the text a binding writes into a block.
+	 *
+	 * Shared by the front end and the editor preview, so the two cannot
+	 * disagree about what a key shows.
+	 *
+	 * Null means "nothing to bind", and the block keeps its saved content.
+	 * Lists other than bonded partners have no sensible single string, so they
+	 * stay null. bonded_pair_names was listed among the binding keys while
+	 * returning null too (#137), so a block bound to it showed whatever it had
+	 * been saved with.
+	 *
+	 * @param string $key   Binding key, already resolved from any legacy alias.
+	 * @param mixed  $value Hydrated value.
+	 * @return string|null
+	 */
+	private static function format_binding_value( string $key, mixed $value ): ?string {
 		if ( is_bool( $value ) ) {
 			return $value ? __( 'Yes', 'shelterkit-pets' ) : __( 'No', 'shelterkit-pets' );
+		}
+
+		if ( 'bonded_pair_names' === $key && is_array( $value ) ) {
+			$names = array_filter(
+				array_map(
+					static fn( $partner ): string => is_array( $partner ) ? (string) ( $partner['name'] ?? '' ) : '',
+					$value
+				),
+				static fn( string $name ): bool => '' !== $name
+			);
+
+			return wp_sprintf( '%l', array_values( $names ) );
 		}
 
 		return is_scalar( $value ) ? (string) $value : null;
@@ -222,9 +250,10 @@ class Petsync_Blocks {
 	 * binding source that resolves asynchronously renders empty and then pops,
 	 * which on a design surface reads as a bug.
 	 *
-	 * Scalars only. A binding writes into a block attribute, so anything that is
-	 * not a string has nowhere to go, and shipping the arrays would put a pet's
-	 * whole gallery into an inline script for no benefit.
+	 * Text only, as format_binding_value() renders it on the front end. A
+	 * binding writes into a block attribute, so anything that is not a string
+	 * has nowhere to go, and shipping the arrays would put a pet's whole gallery
+	 * into an inline script for no benefit.
 	 *
 	 * @return array{label: string, id: int, fields: array<string, string>}
 	 */
@@ -242,10 +271,9 @@ class Petsync_Blocks {
 		}
 
 		foreach ( (array) \Petsync\Core\Pet_Hydrator::get( $pet->ID, 'full' ) as $key => $value ) {
-			if ( is_bool( $value ) ) {
-				$data['fields'][ $key ] = $value ? __( 'Yes', 'shelterkit-pets' ) : __( 'No', 'shelterkit-pets' );
-			} elseif ( is_scalar( $value ) ) {
-				$data['fields'][ $key ] = (string) $value;
+			$text = self::format_binding_value( (string) $key, $value );
+			if ( null !== $text ) {
+				$data['fields'][ $key ] = $text;
 			}
 		}
 
@@ -577,6 +605,7 @@ class Petsync_Blocks {
 			'favorited'              => 'Is Favorited (boolean)',
 			'is_bonded_pair'         => 'Is Bonded Pair (boolean)',
 			'bonded_pair_names'      => 'Bonded Pair Partner Names',
+			'bonded_pair_summary'    => 'Bonded Pair Sentence (empty when not bonded)',
 			'special_needs_summary'  => 'Special Needs Summary Label',
 		);
 

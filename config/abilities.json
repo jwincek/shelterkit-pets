@@ -138,6 +138,9 @@
           "special_needs_summary": {
             "type": "string"
           },
+          "bonded_pair_summary": {
+            "type": "string"
+          },
           "hypoallergenic": {
             "type": "string"
           },

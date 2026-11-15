@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Kennel cards say who a bonded pet must be adopted with.** A line under the
+  banner reads "Bonded with Val: adopt together." On a 4×6 card it fits beside
+  the photo, so the card is no taller, unless a long name or a group of three
+  wraps it to a second line. A pet that is not bonded gets no line and the
+  same layout as before. A kennel card edited in the Site Editor keeps
+  its own design and does not get the line. Add a paragraph bound to the
+  `bonded_pair_summary` key, or reset the card (see the readme's FAQ). Any
+  block can bind to that key.
+
 ### Changed
+- **`bonded_names` holds bonded partners only.** For a synced pet it was
+  Petstablished's siblings list, which includes littermates outside the
+  bonded group, and the export carried it that way. It is now the names of
+  the group's other members. A value entered by hand is kept as typed.
 - **A pet taxonomy link now opens the pet archive with that filter applied.**
   Breed, color, status and the other pet terms, wherever they are linked (menus,
   the Post Terms block, the admin's View link), go to the adoptable pets archive
@@ -98,6 +112,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pet's main photo, so a restore brings the pictures back.
 
 ### Fixed
+- A bonded pet whose partner was not listed was shown as bonded with all its
+  Petstablished siblings, some of them in other pairs or in no pair at all.
+  Partners now come from the bonded group, and a sibling entry is used only
+  to name a member of it. In a group of three or more, one listed partner no
+  longer hides the unlisted ones.
+- A pet entered by hand with "Bonded with" names was not marked bonded
+  anywhere: the badge and partner list came only from Petstablished's group.
+  Names entered by hand now count, shown without links. Separate them with
+  commas.
+- A block bound to `bonded_pair_names` showed its saved text instead of the
+  partners' names.
 - Saving Pets → Sync Settings reset the staleness settings, which have no
   field on that screen, to their defaults.
 - A synced pet drafted because it left Petstablished's listing stayed a draft
