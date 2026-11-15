@@ -3,7 +3,7 @@
  * Version bumper for ShelterKit Pets.
  *
  * The plugin version is declared in a lot of places — the header, the
- * PETSYNC_VERSION constant, readme.txt's Stable tag, package.json,
+ * PETSYNC_VERSION constant, readme.txt's Stable tag, package.json, package-lock.json,
  * and one per block.json. Hand-editing that many files per release is how the
  * header and Stable tag drift apart, and a Stable tag that doesn't match the
  * tagged release makes WordPress.org serve the wrong code or nothing at all.
@@ -111,6 +111,12 @@ $patch( $root . '/readme.txt', '/^(Stable tag:\s*)\S+/mi', '${1}' . $version, 'S
 
 // package.json.
 $patch( $root . '/package.json', '/("version"\s*:\s*")[^"]+(")/', '${1}' . $version . '${2}', 'package.json' );
+
+// package-lock.json repeats it twice: at the top, and for the root package
+// under packages[""]. npm rewrites both only when it regenerates the lock, so
+// every release before 2.1.0 left them behind.
+$patch( $root . '/package-lock.json', '/("version"\s*:\s*")[^"]+(")/', '${1}' . $version . '${2}', 'package-lock.json' );
+$patch( $root . '/package-lock.json', '/("packages"\s*:\s*\{\s*""\s*:\s*\{[^{}]*?"version"\s*:\s*")[^"]+(")/', '${1}' . $version . '${2}', 'package-lock.json root package' );
 
 // Every block.json — core uses this as the block's asset version.
 foreach ( glob( $root . '/blocks/*/block.json' ) ?: [] as $block_json ) {

@@ -746,6 +746,17 @@ if ( is_file( $pkg_path ) ) {
 	}
 }
 
+$lock_path = $root . '/package-lock.json';
+if ( is_file( $lock_path ) ) {
+	$lock = json_decode( (string) file_get_contents( $lock_path ), true );
+	if ( isset( $lock['version'] ) ) {
+		$version_sources['package-lock.json'] = $lock['version'];
+	}
+	if ( isset( $lock['packages']['']['version'] ) ) {
+		$version_sources['package-lock.json (packages[""])'] = $lock['packages']['']['version'];
+	}
+}
+
 // Every block.json carries a version used by core as the asset cache-buster
 // (see wp-includes/blocks.php — absent means WP falls back to its own version,
 // which would not change when the plugin ships a CSS/JS fix).
