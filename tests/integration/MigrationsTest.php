@@ -78,6 +78,17 @@ final class MigrationsTest extends PetTestCase {
 		}
 	}
 
+	/**
+	 * A hand-entered pet as a site from before migration 9 has it: nothing under
+	 * the new status name. Today's code gives a new pet "available" under
+	 * vcps_pet_status the moment it is created, which no pre-rename pet has.
+	 */
+	private function make_legacy_pet(): int {
+		$id = $this->make_manual_pet();
+		wp_set_object_terms( $id, array(), 'vcps_pet_status' );
+		return $id;
+	}
+
 	public function tear_down(): void {
 		if ( taxonomy_exists( 'pet_status' ) ) {
 			unregister_taxonomy( 'pet_status' );
@@ -91,7 +102,7 @@ final class MigrationsTest extends PetTestCase {
 	 */
 	public function test_migration_3_registers_the_old_name_only_for_its_own_run(): void {
 		$this->register_legacy_status();
-		$id = $this->make_manual_pet();
+		$id = $this->make_legacy_pet();
 		wp_set_object_terms( $id, array(), 'pet_status' );
 		unregister_taxonomy( 'pet_status' );
 
@@ -104,7 +115,7 @@ final class MigrationsTest extends PetTestCase {
 
 	public function test_migration_3_gives_statusless_hand_entered_pets_a_status(): void {
 		$this->register_legacy_status();
-		$id = $this->make_manual_pet();
+		$id = $this->make_legacy_pet();
 		wp_set_object_terms( $id, array(), 'pet_status' );
 
 		petsync_migrate_3_default_status();
@@ -117,7 +128,7 @@ final class MigrationsTest extends PetTestCase {
 
 	public function test_migration_3_never_relabels_a_pet_that_has_a_status(): void {
 		$this->register_legacy_status();
-		$id = $this->make_manual_pet();
+		$id = $this->make_legacy_pet();
 		wp_set_object_terms( $id, 'adopted', 'pet_status' );
 
 		petsync_migrate_3_default_status();
@@ -143,9 +154,49 @@ final class MigrationsTest extends PetTestCase {
 		$this->assertSame( array(), wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'slugs' ) ) );
 	}
 
+	/**
+	 * #145. A site set up and filled from WP-CLI runs the rail on its first
+	 * page load, after its pets exist under the new names. Migration 3 took them
+	 * for statusless pre-rename pets and gave each "available" under the old
+	 * name; migration 9 then kept that term and deleted the real one, so an
+	 * adopted pet was marked available too and every label went lowercase.
+	 */
+	public function test_migrations_3_and_9_leave_a_new_pets_status_alone(): void {
+		$adopted   = $this->make_manual_pet( array( 'post_title' => 'Adopted Already' ) );
+		$available = $this->make_manual_pet( array( 'post_title' => 'Still Here' ) );
+		wp_set_object_terms( $adopted, 'adopted', 'vcps_pet_status' );
+		$before = get_term_by( 'slug', 'available', 'vcps_pet_status' );
+
+		petsync_migrate_3_default_status();
+		petsync_migrate_9_taxonomy_prefix();
+		clean_object_term_cache( array( $adopted, $available ), 'vcps_pet' );
+
+		$this->assertSame( array( 'adopted' ), wp_get_object_terms( $adopted, 'vcps_pet_status', array( 'fields' => 'slugs' ) ), 'an adopted pet must not be marked available' );
+		$this->assertSame( array( 'available' ), wp_get_object_terms( $available, 'vcps_pet_status', array( 'fields' => 'slugs' ) ) );
+
+		$after = get_term_by( 'slug', 'available', 'vcps_pet_status' );
+		$this->assertSame( $before->term_id, $after->term_id, 'the Available term must survive, not be replaced' );
+		$this->assertSame( 'Available', $after->name );
+	}
+
+	/**
+	 * Where migration 3 does have to create the default term under the old
+	 * name, it takes the configured name. It used to pass the slug, which
+	 * wp_set_object_terms() treats as a name.
+	 */
+	public function test_migration_3_names_the_default_term_properly(): void {
+		$this->register_legacy_status();
+		$id = $this->make_legacy_pet();
+
+		petsync_migrate_3_default_status();
+		$this->register_legacy_status();
+
+		$this->assertSame( array( 'Available' ), wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'names' ) ) );
+	}
+
 	public function test_migration_3_is_idempotent(): void {
 		$this->register_legacy_status();
-		$id = $this->make_manual_pet();
+		$id = $this->make_legacy_pet();
 		wp_set_object_terms( $id, array(), 'pet_status' );
 
 		petsync_migrate_3_default_status();
