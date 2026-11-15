@@ -1,0 +1,11 @@
+{
+	"name": "Larkspur Lane Animal Shelter",
+	"street_address": "214 Orchard Road",
+	"locality": "Fairview",
+	"region": "VT",
+	"postal_code": "05000",
+	"country": "United States",
+	"phone": "(802) 555-0142",
+	"email": "adopt@larkspurlane.example",
+	"url": "https://larkspurlane.example"
+}
