@@ -156,7 +156,7 @@ No. The blocks use the WordPress Interactivity API and ship as ready-to-run sour
 
 Back up the database as often as the rest of your site. Every pet's details live there. A sync can recreate the pets it imports from Petstablished, but nothing can recreate the ones you added by hand or from a spreadsheet.
 
-Back up your Media Library folder (`wp-content/uploads/`) too. Each pet's main photo is a file there, including the ones copied from Petstablished, as is every photo you uploaded yourself. A sync does not download a photo again once it has one on record, so a database restored without that folder leaves pets without photos.
+Back up your Media Library folder (`wp-content/uploads/`) too. Photos you uploaded yourself, gallery images included, exist only there. A synced pet's main photo is a file there as well, but if it goes missing, the next sync downloads it again from Petstablished for as long as your account is active.
 
 **Pets → Export**, with unpublished pets included, gives you a spreadsheet of every pet that imports straight back into an empty site. It records each pet's main photo by its address, so an import on a new site downloads them again while the old site is still online. Gallery images are not in the export.
 

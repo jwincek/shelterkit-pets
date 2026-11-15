@@ -165,6 +165,40 @@ final class ImportPhotosTest extends PetTestCase {
 		$this->assertGreaterThan( 0, $first );
 	}
 
+	/**
+	 * After a database restore without uploads/, the earlier download's record
+	 * is back and its file is not. Reusing it gave the pet a broken photo; the
+	 * address is downloaded again instead, and that copy is what a later
+	 * import reuses.
+	 */
+	public function test_an_earlier_download_whose_file_is_gone_is_downloaded_again(): void {
+		$csv = "name,microchip_id,image\nClover,PHOTO-CHIP,{$this->photo( 'clover' )}\n";
+
+		$this->import( $csv );
+		Photo_Queue::process( 60 );
+		$pet = (int) $this->import( $csv, false )['rows'][0]['id'];
+		$old = (int) get_post_thumbnail_id( $pet );
+		wp_delete_attachment_files( $old, (array) wp_get_attachment_metadata( $old ), array(), (string) get_attached_file( $old ) );
+		clearstatcache();
+
+		$this->import( $csv );
+		Photo_Queue::process( 60 );
+		$new = (int) get_post_thumbnail_id( $pet );
+
+		$this->assertCount( 2, $this->downloads );
+		$this->assertNotSame( $old, $new );
+		$this->assertFileExists( (string) get_attached_file( $new ) );
+		$this->assertNotSame(
+			get_attached_file( $old ),
+			get_attached_file( $new ),
+			'two records sharing one file: deleting the stale one from the Media Library would delete the photo'
+		);
+
+		$this->import( $csv );
+		Photo_Queue::process( 60 );
+		$this->assertCount( 2, $this->downloads, 'the working copy is reused, not the one with no file' );
+	}
+
 	public function test_an_export_carries_the_photo_and_a_round_trip_downloads_nothing(): void {
 		$attachment = $this->local_attachment();
 		$pet        = $this->make_manual_pet( array( 'post_title' => 'Pictured' ) );

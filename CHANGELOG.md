@@ -154,6 +154,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pets, then the import added one and overwrote it with the second. Both now
   report the second row as an error.
 - Backslashes in imported values were dropped.
+- A pet's photo whose file had gone, as it does when a site's database is
+  restored without its `uploads` folder, was never downloaded again: the
+  sync saw the photo on record and skipped it. It is now fetched on the next
+  sync. A photo whose download failed is tried again too, where before an
+  unchanged pet never retried. A spreadsheet import no longer reuses an
+  earlier download whose file is missing. Photos a media-offload plugin
+  serves from its own storage count as present, so they are not downloaded
+  again.
 
 ## [1.6.0] - 2026-11-06
 
