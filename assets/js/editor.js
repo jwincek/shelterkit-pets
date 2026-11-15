@@ -11,7 +11,8 @@
 
 ( function ( wp ) {
 	const { registerPlugin } = wp.plugins;
-	const { PluginSidebar, PluginSidebarMoreMenuItem } = wp.editPost;
+	// From the editor package: the edit-post names are deprecated since 6.6.
+	const { PluginSidebar, PluginSidebarMoreMenuItem } = wp.editor;
 	const { createElement: el, useState } = wp.element;
 	const { PanelBody, TextControl, Button, Notice } = wp.components;
 	const { useSelect } = wp.data;

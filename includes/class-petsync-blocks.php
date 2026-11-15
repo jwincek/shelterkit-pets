@@ -54,6 +54,7 @@ class Petsync_Blocks {
 		add_action( 'init', array( $this, 'register_blocks' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_interactivity' ) );
 		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_editor_assets' ) );
+		add_action( 'enqueue_block_assets', array( $this, 'enqueue_canvas_styles' ) );
 	}
 
 	// === Block Bindings ===
@@ -512,19 +513,11 @@ class Petsync_Blocks {
 			wp_set_script_translations( self::NAMESPACE . $suffix, 'shelterkit-pets' );
 		}
 
-		// Editor styles.
-		wp_enqueue_style(
-			self::NAMESPACE . '-editor',
-			PETSYNC_URL . 'assets/css/editor.css',
-			array(),
-			PETSYNC_VERSION
-		);
-
 		// Binding helper sidebar script.
 		wp_enqueue_script(
 			self::NAMESPACE . '-binding-helper',
 			PETSYNC_URL . 'assets/js/editor.js',
-			array( 'wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-data' ),
+			array( 'wp-plugins', 'wp-editor', 'wp-element', 'wp-components', 'wp-data' ),
 			PETSYNC_VERSION,
 			true
 		);
@@ -535,6 +528,28 @@ class Petsync_Blocks {
 			array(
 				'bindingKeys' => $this->get_binding_keys(),
 			)
+		);
+	}
+
+	/**
+	 * Styles for block previews in the editor canvas.
+	 *
+	 * On enqueue_block_assets rather than enqueue_block_editor_assets: the
+	 * canvas is an iframe, and WordPress copies outer-frame styles into it only
+	 * as a fallback, logging "was added to the iframe incorrectly" on every
+	 * editor load. This hook also fires on the front end, where preview styles
+	 * do not belong, hence the admin check.
+	 */
+	public function enqueue_canvas_styles(): void {
+		if ( ! is_admin() ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			self::NAMESPACE . '-editor',
+			PETSYNC_URL . 'assets/css/editor.css',
+			array(),
+			PETSYNC_VERSION
 		);
 	}
 
