@@ -118,7 +118,9 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 
 	// ── Shelter Details ────────────────────────────────────────────────────
 	ShelterKit_Profile::save( $shelter );
-	WP_CLI::log( 'Shelter Details: ' . $shelter['name'] . '.' );
+	// The theme's header shows the site title, so it carries the shelter's name.
+	update_option( 'blogname', $shelter['name'] );
+	WP_CLI::log( 'Shelter Details and site title: ' . $shelter['name'] . '.' );
 
 	// ── The CSV, with photo file names replaced by their URLs here ─────────
 	$in      = fopen( $demo . '/pets.csv', 'r' );
