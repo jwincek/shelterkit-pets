@@ -964,9 +964,7 @@ $filter_config = array(
 							>
 								<?php
 								echo Petsync_Icons::get_heart_interactive( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG.
-									array(),
-									"state.isFavorited ? 'currentColor' : 'none'",
-									$is_favorited ? 'currentColor' : 'none'
+									array()
 								);
 								?>
 							</button>

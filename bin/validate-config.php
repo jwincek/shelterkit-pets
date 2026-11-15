@@ -1187,6 +1187,23 @@ foreach ( $markup_files as $markup_file ) {
 	}
 }
 
+// The same mistake reached every favorite heart through PHP rather than a
+// template: Petsync_Icons::get_heart_interactive() built a <path> carrying
+// data-wp-bind--fill, so every pet page logged the notice, and the scan above
+// never saw it. The icon helper builds only SVG, so no string literal in it
+// may carry a directive at all. Comments are skipped, since they explain why.
+$icons_file = $root . '/includes/class-petsync-icons.php';
+if ( is_file( $icons_file ) ) {
+	foreach ( token_get_all( (string) file_get_contents( $icons_file ) ) as $token ) {
+		if ( is_array( $token )
+			&& in_array( $token[0], [ T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE ], true )
+			&& str_contains( $token[1], 'data-wp-' )
+		) {
+			$add( 'error', 'svg-directives', "includes/class-petsync-icons.php:{$token[2]} builds an Interactivity directive into an icon. The server-side processor refuses directives inside an <svg>; give the icon a class and style it from its HTML ancestor's state." );
+		}
+	}
+}
+
 // ── Check 16: uninstall knows every taxonomy name ───────────────────────────
 // uninstall.php cannot load the plugin, so it lists the taxonomies itself: the
 // current names from taxonomies.json, and the names before migration 9 from

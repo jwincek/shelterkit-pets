@@ -1325,3 +1325,9 @@
 		transition: none;
 	}
 }
+
+/* A favorited pet's heart fills from its button's state; see
+   Petsync_Icons::get_heart_interactive() for why not from the <svg>. */
+.pet-listing-grid__item.is-favorited .pet-listing-grid__card-favorite .petsync-heart {
+	fill: currentcolor;
+}

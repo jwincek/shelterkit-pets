@@ -28,6 +28,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		type="button"
 		class="pet-favorites-toggle__btn"
 		data-wp-on--click="actions.openFavoritesModal"
+		data-wp-class--has-favorites="state.favoritesCount"
 		aria-label="<?php esc_attr_e( 'View favorites', 'shelterkit-pets' ); ?>"
 	>
 		<?php
@@ -36,8 +37,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				'width'  => 20,
 				'height' => 20,
 				'class'  => 'pet-favorites-toggle__icon',
-			),
-			"petsync::state.favoritesCount > 0 ? 'currentColor' : 'none'"
+			)
 		);
 		?>
 

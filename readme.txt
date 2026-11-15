@@ -194,6 +194,7 @@ Pet photos are kept either way. They are ordinary Media Library items and may be
 * Fixed: an export of synced pets could not be imported back, and re-importing an export emptied galleries and descriptions and published drafts.
 * Fixed: a bonded pet could be shown as bonded with its littermates, and names entered by hand did not mark a pet bonded.
 * Fixed: after a database was restored without the uploads folder, synced pets' photos never came back.
+* Fixed: a favorited pet's heart never filled, and pet pages logged a PHP notice on sites with debugging on.
 
 = 1.6.0 =
 * Security: microchip numbers could be read by any visitor through the REST API and the plugin's public abilities, although no page showed them. They are now visible only to people who can edit the pet.

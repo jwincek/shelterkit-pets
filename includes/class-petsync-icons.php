@@ -627,27 +627,32 @@ class Petsync_Icons {
 	}
 
 	/**
-	 * Get a heart icon with dynamic fill binding for Interactivity API.
+	 * A favorite button's heart, which each block's CSS fills from its button.
 	 *
-	 * This is a special case for the favorite button where the fill
-	 * changes based on state.
+	 * It carries the class `petsync-heart` and no directive. It used to bind
+	 * `fill` on its <path> with an expression such as
+	 * "state.isFavorited ? 'currentColor' : 'none'". WordPress's server-side
+	 * processor refuses any directive inside an <svg>, with a notice on every
+	 * render, and directives do not evaluate expressions anyway, so the heart
+	 * never filled. Every favorite button already shows its state on an HTML
+	 * element (aria-pressed, or an is-active, is-favorited or has-favorites
+	 * class), rendered on the server and kept current in the browser, and its
+	 * block's style.css fills `.petsync-heart` from that. The path has no fill
+	 * of its own, so it cannot stay filled once the state is cleared.
 	 *
-	 * @param array  $attrs      Optional. SVG attributes.
-	 * @param string $fill_bind  Optional. The data-wp-bind--fill directive value.
+	 * Extra arguments, which callers once passed for the directive, are
+	 * ignored.
+	 *
+	 * @param array $attrs Optional. SVG attributes.
 	 * @return string SVG HTML.
 	 */
-	public static function get_heart_interactive( array $attrs = array(), string $fill_bind = "state.isFavorited ? 'currentColor' : 'none'", string $initial_fill = 'none' ): string {
-		$svg_attrs = self::build_attributes( '0 0 24 24', $attrs );
-
-		$path_attrs = sprintf(
-			'fill="%s" stroke="currentColor" stroke-width="2" data-wp-bind--fill="%s"',
-			esc_attr( $initial_fill ),
-			esc_attr( $fill_bind )
-		);
+	public static function get_heart_interactive( array $attrs = array() ): string {
+		$attrs['class'] = trim( ( $attrs['class'] ?? '' ) . ' petsync-heart' );
+		$svg_attrs      = self::build_attributes( '0 0 24 24', $attrs );
 
 		$d = self::ICONS['heart']['paths'][0];
 
-		return '<svg ' . $svg_attrs . '><path ' . $path_attrs . ' d="' . esc_attr( $d ) . '"/></svg>';
+		return '<svg ' . $svg_attrs . '><path d="' . esc_attr( $d ) . '"/></svg>';
 	}
 
 	/**

@@ -170,6 +170,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   earlier download whose file is missing. Photos a media-offload plugin
   serves from its own storage count as present, so they are not downloaded
   again.
+- A favorited pet's heart never filled, and every pet page logged a PHP
+  notice on a site with debugging on ("Interactivity directives were
+  detected inside an incompatible SVG tag"). The heart bound its fill inside
+  the icon, which WordPress refuses, using an expression, which it does not
+  evaluate. Hearts now fill from their button's state, in the pet actions,
+  pet card, listing grid, slider, comparison and favorites toggle blocks.
+- The pet editor logged two deprecation warnings on every load, for sidebar
+  components taken from `wp.editPost`, and a warning that the block preview
+  styles reached the editor canvas the wrong way.
 
 ## [1.6.0] - 2026-11-06
 

@@ -107,3 +107,9 @@
 		transform: none;
 	}
 }
+
+/* A favorited pet's heart fills from its button's state; see
+   Petsync_Icons::get_heart_interactive() for why not from the <svg>. */
+.pet-favorite-btn[aria-pressed="true"] .petsync-heart {
+	fill: currentcolor;
+}

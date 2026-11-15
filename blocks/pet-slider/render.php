@@ -367,8 +367,7 @@ $archive_url = get_post_type_archive_link( 'vcps_pet' );
 										array(
 											'width'  => 24,
 											'height' => 24,
-										),
-										"state.isCurrentPetFavorited ? 'currentColor' : 'none'"
+										)
 									); /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG. */
 									?>
 								</button>
