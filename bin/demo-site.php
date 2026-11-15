@@ -53,7 +53,11 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 		WP_CLI::error( 'This site already has pets. The demo shelter loads only into a fresh site, so it can never mix with a real shelter\'s animals.' );
 	}
 
-	$current_name = ShelterKit_Profile::get( 'name' );
+	// The saved option, not ShelterKit_Profile::get(), which falls back to the
+	// site title: a fresh site titled anything else was refused as though it
+	// were another shelter's.
+	$saved        = get_option( ShelterKit_Profile::OPTION );
+	$current_name = is_array( $saved ) ? (string) ( $saved['name'] ?? '' ) : '';
 	if ( '' !== $current_name && $current_name !== $shelter['name'] ) {
 		WP_CLI::error( "Shelter Details already name \"{$current_name}\". Use a fresh site." );
 	}
@@ -101,6 +105,16 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 		$urls[ $file ] = (string) wp_get_attachment_url( $id );
 	}
 	WP_CLI::log( sprintf( 'Photos: %d in the Media Library.', count( $urls ) ) );
+
+	// ── A shelter's site, not WordPress's sample one ──────────────────────
+	// The theme's header lists pages, so "Sample Page" would sit beside the
+	// shelter's name in every screenshot.
+	foreach ( array( array( 'sample-page', 'page' ), array( 'hello-world', 'post' ) ) as [ $slug, $type ] ) {
+		$sample = get_page_by_path( $slug, OBJECT, $type );
+		if ( $sample ) {
+			wp_delete_post( $sample->ID, true );
+		}
+	}
 
 	// ── Shelter Details ────────────────────────────────────────────────────
 	ShelterKit_Profile::save( $shelter );
