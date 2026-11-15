@@ -31,6 +31,9 @@ Add animals by hand, import a spreadsheet, or sync from
 - **Optional `AnimalShelter` structured data** that refines what an SEO plugin
   already says about your organisation instead of competing with it.
 - **WP-CLI:** `wp shelterkit-pets export`, `import` and `migrate`.
+- **Other sites can feature your pets** through the REST API, and can ask
+  whether a pet that stopped being listed was adopted, so they say it found a
+  home only when it did.
 
 Built on the Abilities API, Block Bindings and the Interactivity API, with no
 build step.
@@ -63,9 +66,10 @@ Amazon Web Services. A pet's YouTube video is embedded from YouTube's
 privacy-enhanced domain. The **External services** section of
 [`readme.txt`](readme.txt) says exactly what is sent, when, and where.
 
-Microchip numbers are visible only to people who can edit the pet. A visitor's
-favorites and comparisons are kept in their own browser and a cookie, or, for
-a logged-in user, with their account.
+Microchip numbers are visible only to people who can edit the pet. Whether a
+pet was adopted is public, even once it is no longer listed; nothing else
+about an unlisted pet is. A visitor's favorites and comparisons are kept in
+their own browser and a cookie, or, for a logged-in user, with their account.
 
 ## Getting help
 

@@ -33,7 +33,12 @@ themselves:
 - **Published pets** and everything the blocks display about them, through the
   pages, the REST API and the read abilities (`get-pet`, `list-pets`,
   `filter-pets`, `batch-get-pets`, `get-filter-options`, `get-adoption-stats`).
-  Draft, pending and private pets are not.
+  Draft, pending and private pets are not, apart from the next point.
+- **Whether a pet was adopted**, listed or not, through the `check-adoptions`
+  ability, so that another site that featured the pet can say it found a
+  home. It answers only that, and never about a private or trashed pet. Other
+  outcomes, such as returned or euthanized, are not public. A shelter can turn
+  it off with the `petsync_adopted_statuses` filter.
 - **Favorites and comparison** work for logged-out visitors, keyed to a cookie
   in their own browser. They hold only pet IDs. A request from another site
   cannot reach a logged-in user's saved lists, because WordPress treats a
@@ -47,7 +52,8 @@ What should **not** be public, and is worth reporting if you find a way to it:
 - a pet's **microchip number**, which is returned only to users who can edit
   that pet;
 - the provider's record ID and raw API data stored with a synced pet;
-- anything about draft, pending or private pets;
+- anything else about draft, pending or private pets, including any status
+  other than adopted;
 - another user's saved favorites or comparison;
 - any write action (sync, import, export, settings, kennel-card setup) without
   the matching capability and nonce.

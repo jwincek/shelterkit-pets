@@ -6,8 +6,8 @@
  * return value against its own `output_schema` and turns a mismatch into an
  * `ability_invalid_output` WP_Error. In 6.9 — the version this plugin declares
  * as its floor — that method did not exist and the schemas were decorative.
- * All twelve abilities here declare one, so twelve contracts that were never
- * enforced became enforced by a WordPress release.
+ * All twelve abilities here at the time declared one, so twelve contracts that
+ * were never enforced became enforced by a WordPress release.
  *
  * The existing ability tests cannot see this. They call the handler functions
  * directly — get_pet( array( 'id' => $id ) ) — which is the fast way to test
@@ -51,7 +51,7 @@ final class AbilityOutputSchemaTest extends PetTestCase {
 	 * A representative input per ability.
 	 *
 	 * Deliberately exhaustive rather than discovered: an ability with no entry
-	 * fails the coverage test below, so adding a thirteenth ability forces a
+	 * fails the coverage test below, so adding an ability forces a
 	 * decision about how to exercise it instead of silently skipping it.
 	 *
 	 * @return array<string, array<string, mixed>>
@@ -72,6 +72,7 @@ final class AbilityOutputSchemaTest extends PetTestCase {
 			),
 			'petsync/get-comparison'     => array(),
 			'petsync/get-adoption-stats' => array(),
+			'petsync/check-adoptions'    => array( 'ids' => array( $this->pet ) ),
 			'petsync/set-pet-gallery'    => array(
 				'id'             => $this->pet,
 				'attachment_ids' => array(),

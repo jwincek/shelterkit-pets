@@ -826,6 +826,57 @@
         }
       }
     },
+    "petsync/check-adoptions": {
+      "label": "Check Adoptions",
+      "description": "Says which of the given pets were adopted, including pets the site no longer shows, so a site that featured one can say it found a home. Says nothing else about an unlisted pet. Also gives the address of the page listing the pets still waiting.",
+      "category": "pets",
+      "permission": "public",
+      "meta": {
+        "annotations": {
+          "readonly": true,
+          "destructive": false,
+          "idempotent": true
+        },
+        "show_in_rest": true,
+        "mcp": {
+          "public": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "ids"
+        ],
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Pet post IDs, up to 100."
+          }
+        },
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "adopted": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "The given IDs whose pet was adopted, in the order given."
+          },
+          "listing_url": {
+            "type": "string",
+            "description": "The page listing the pets still waiting."
+          }
+        }
+      }
+    },
     "petsync/set-pet-gallery": {
       "label": "Set Pet Gallery",
       "description": "Replaces a pet's hand-curated gallery with the given attachments. An empty list clears it, which for an imported pet restores its provider images.",

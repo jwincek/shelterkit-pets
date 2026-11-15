@@ -33,8 +33,10 @@ class Petsync_REST {
 	/**
 	 * Abilities to expose via plugin REST routes.
 	 *
-	 * Only abilities called from client-side Interactivity stores need
-	 * routes here. Server-only abilities (like filter-pets) do not.
+	 * Only abilities that visitors' browsers or other sites call need routes
+	 * here: the Interactivity stores, and check-adoptions, which a site
+	 * featuring the shelter's pets asks from its server. Server-only abilities
+	 * (like filter-pets) do not.
 	 *
 	 * @var string[]
 	 */
@@ -44,6 +46,7 @@ class Petsync_REST {
 		'petsync/clear-favorites',
 		'petsync/update-comparison',
 		'petsync/get-comparison',
+		'petsync/check-adoptions',
 	];
 
 	/**
@@ -155,6 +158,13 @@ class Petsync_REST {
 		$result = $ability->execute( $input );
 
 		if ( is_wp_error( $result ) ) {
+			// Core's ability errors carry no HTTP status, so REST would answer a
+			// caller's bad input with a 500, as if the site were broken.
+			$data = $result->get_error_data();
+			if ( 'ability_invalid_input' === $result->get_error_code() && ! isset( $data['status'] ) ) {
+				$result->add_data( array_merge( is_array( $data ) ? $data : array(), array( 'status' => 400 ) ) );
+			}
+
 			return $result;
 		}
 
