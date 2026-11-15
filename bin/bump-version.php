@@ -52,7 +52,19 @@ if ( ! preg_match( '/^\d+\.\d+(\.\d+)?$/', $version ) ) {
 	exit( 1 );
 }
 
-$main_file = $root . '/' . basename( $root ) . '.php';
+// The main plugin file, identified by its "Plugin Name:" header, as
+// validate-config.php and build-dist.sh do. Deriving it from the directory
+// name missed the header and PETSYNC_VERSION in any checkout not named
+// shelterkit-pets (a worktree, or a clone named after the repository) while
+// still bumping the other 23 files, which validator check 8 then reported.
+$main_file = $root . '/shelterkit-pets.php';
+foreach ( glob( $root . '/*.php' ) ?: [] as $candidate ) {
+	$head = (string) file_get_contents( $candidate, false, null, 0, 8192 );
+	if ( preg_match( '/^[ \t]*\*?[ \t]*Plugin Name:[ \t]*\S/mi', $head ) ) {
+		$main_file = $candidate;
+		break;
+	}
+}
 $changes   = [];
 $errors    = [];
 

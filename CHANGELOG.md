@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-14
+
 ### Added
 - **Kennel cards say who a bonded pet must be adopted with.** A line under the
   banner reads "Bonded with Val: adopt together." On a 4×6 card it fits beside
@@ -16,90 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its own design and does not get the line. Add a paragraph bound to the
   `bonded_pair_summary` key, or reset the card (see the readme's FAQ). Any
   block can bind to that key.
-
-### Changed
-- **`bonded_names` holds bonded partners only.** For a synced pet it was
-  Petstablished's siblings list, which includes littermates outside the
-  bonded group, and the export carried it that way. It is now the names of
-  the group's other members. A value entered by hand is kept as typed.
-- **A pet taxonomy link now opens the pet archive with that filter applied.**
-  Breed, color, status and the other pet terms, wherever they are linked (menus,
-  the Post Terms block, the admin's View link), go to the adoptable pets archive
-  filtered to that term. The old term pages, such as `/pet_breed/beagle/`,
-  redirect there permanently, and core sitemaps no longer list them. The
-  archive can now also be filtered by color, coat, status, hypoallergenic and
-  declawed from the URL.
-- **The pet taxonomies are named `vcps_pet_*`, matching the post type.**
-  `pet_breed` is now `vcps_pet_breed`, and likewise for all nine. Terms and
-  their assignments move over automatically on update. URLs and the REST API
-  keep the old names, so `/pet_breed/beagle/`, `/wp/v2/pet_breed` and
-  `/wp/v2/vcps_pet?pet_breed=` work as before. Code that names a taxonomy, in a
-  `tax_query` or a call such as `get_the_terms()`, needs the new name, and so
-  does a `?pet_breed=` query-string link, which only sites without pretty
-  permalinks used.
-- **Descriptions export as plain paragraphs.** The CSV export used to write a
-  description as HTML, with Petstablished's apostrophes as `&#039;`. It now
-  writes paragraphs separated by a blank line, and an import turns them back
-  into paragraphs in the editor's own format. A description with a list, a
-  link or other structure travels as its markup, so nothing is lost.
-- **Every breed and colour is exported, not just the first.** A cell lists
-  them separated by `|`, and the import reads them the same way. In JSON they
-  are lists.
-- **Re-importing an export no longer duplicates pets without a microchip.** A
-  row is matched on the `id` column of a file this site exported, unless the
-  pet's microchip says it is a different animal; otherwise on its microchip.
-  The preview notes an id match whose name differs, since a file from another
-  site would match unrelated pets. When several pets share a microchip, as a
-  re-listed animal's old draft copy does, the listed one is matched and the
-  preview names the others.
-- **An import no longer changes a pet synced from a platform.** The next sync
-  would have undone it. Such rows are skipped with a note saying to edit the
-  pet on the platform. A synced pet's microchip is now found in its provider
-  data, so a shelter's own sheet no longer adds a copy of a synced pet.
-- **The import preview is now the confirmation step.** The first screen can
-  only preview; the "Import now" button that wrote on the first click is gone.
-  The preview keeps the uploaded file, so confirming imports exactly the file
-  previewed, without choosing it again. It shows how each column will be read,
-  with an example from the first row, and a dropdown to change or ignore any
-  column. Every row with an error or a note is listed, not only the first 25,
-  and so are the breeds and other terms the file would add.
-- **An unknown status is refused.** "Adoptable" instead of "Available" used to
-  create a new status, which hid those pets from every adoptable listing. A
-  status must now be one the site has, by name or slug.
-- **Export can include unpublished pets, for a complete backup.** Pets →
-  Export has an option, and WP-CLI `--include-unpublished`, to add drafts,
-  pending and private pets. A `post_status` column now travels with every
-  row. An import applies it only to pets it adds, so restoring a backup does
-  not publish its drafts, and an export edited for a week does not put back
-  up a pet unlisted in the meantime. Two records sharing a microchip, such
-  as a re-listed animal's old draft, are both restored.
-- **Spreadsheets as Excel saves them import cleanly.** A file in Excel's
-  older Windows "CSV" format (Windows-1252) is converted, so accented letters
-  and curly apostrophes no longer fail with "Could not insert post into the
-  database". A file separated by semicolons, as Excel writes in much of
-  Europe, is read as such. The preview says when either happened.
-- **The JSON export says `"portable"` instead of `"importable"`.** Nothing
-  imports JSON; the flag says whether its columns are the ones a CSV import
-  reads.
-- **A synced pet is shown only if its status is one the site shows.**
-  Petstablished's feed is not filtered by status, so an adopted, returned or
-  euthanized pet got a public page offering an adoption application. Now only
-  Available, Adoption Pending and On Hold pets are published, and Pets → Sync
-  Settings can change the list. Other synced pets are kept as drafts, and the
-  pets list says why ("Adopted: not shown on this site", "No longer listed on
-  Petstablished since …", "Hidden on Petstablished"). Pets added by hand are
-  not affected.
-- **Only an available pet offers the adoption application.** A pending,
-  on-hold or adopted pet's page says it is not taking applications instead.
-- **Visitors can no longer list the statuses the site does not show** through
-  the REST API, which named every status, Euthanized included.
-- A synced pet drafted in WordPress is published again by the next sync, as
-  the pets list now says. To keep one off the site, hide it on Petstablished.
-- **The sync can bring in every species.** It asked Petstablished for cats
-  and dogs only, so a shelter's rabbits, birds and other animals never
-  appeared. Pets → Sync Settings now has "Species to sync": empty syncs every
-  species. A site that was already syncing keeps cats and dogs until someone
-  clears or changes it; a new site syncs everything.
 - **An import can bring photos.** An `image` column (one URL) sets a pet's
   main photo and a `gallery` column (URLs separated by `|`) its gallery,
   named as the pet model names them; "Photo" and "Photos" work too. The
@@ -110,6 +28,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   downloaded again. Each address must be a public http(s) link to an image
   file, which the preview checks. The portable export now carries each
   pet's main photo, so a restore brings the pictures back.
+- **The sync can bring in every species.** It asked Petstablished for cats
+  and dogs only, so a shelter's rabbits, birds and other animals never
+  appeared. Pets → Sync Settings now has "Species to sync": empty syncs every
+  species. A site that was already syncing keeps cats and dogs until someone
+  clears or changes it; a new site syncs everything.
+- **Export can include unpublished pets, for a complete backup.** Pets →
+  Export has an option, and WP-CLI `--include-unpublished`, to add drafts,
+  pending and private pets. A `post_status` column now travels with every
+  row. An import applies it only to pets it adds, so restoring a backup does
+  not publish its drafts, and an export edited for a week does not put back
+  up a pet unlisted in the meantime. Two records sharing a microchip, such
+  as a re-listed animal's old draft, are both restored.
+
+### Changed
+- **The pet taxonomies are named `vcps_pet_*`, matching the post type.**
+  `pet_breed` is now `vcps_pet_breed`, and likewise for all nine. Terms and
+  their assignments move over automatically on update. URLs and the REST API
+  keep the old names, so `/pet_breed/beagle/`, `/wp/v2/pet_breed` and
+  `/wp/v2/vcps_pet?pet_breed=` work as before. Code that names a taxonomy, in a
+  `tax_query` or a call such as `get_the_terms()`, needs the new name, and so
+  does a `?pet_breed=` query-string link, which only sites without pretty
+  permalinks used.
+- **A pet taxonomy link now opens the pet archive with that filter applied.**
+  Breed, color, status and the other pet terms, wherever they are linked (menus,
+  the Post Terms block, the admin's View link), go to the adoptable pets archive
+  filtered to that term. The old term pages, such as `/pet_breed/beagle/`,
+  redirect there permanently, and core sitemaps no longer list them. The
+  archive can now also be filtered by color, coat, status, hypoallergenic and
+  declawed from the URL.
+- **A synced pet is shown only if its status is one the site shows.**
+  Petstablished's feed is not filtered by status, so an adopted, returned or
+  euthanized pet got a public page offering an adoption application. Now only
+  Available, Adoption Pending and On Hold pets are published, and Pets → Sync
+  Settings can change the list. Other synced pets are kept as drafts, and the
+  pets list says why ("Adopted: not shown on this site", "No longer listed on
+  Petstablished since …", "Hidden on Petstablished"). Pets added by hand are
+  not affected.
+- **Only an available pet offers the adoption application.** A pending,
+  on-hold or adopted pet's page says it is not taking applications instead.
+- **A synced pet drafted in WordPress is published again by the next sync,**
+  as the pets list now says. To keep one off the site, hide it on Petstablished.
+- **Visitors can no longer list the statuses the site does not show** through
+  the REST API, which named every status, Euthanized included.
+- **The import preview is now the confirmation step.** The first screen can
+  only preview; the "Import now" button that wrote on the first click is gone.
+  The preview keeps the uploaded file, so confirming imports exactly the file
+  previewed, without choosing it again. It shows how each column will be read,
+  with an example from the first row, and a dropdown to change or ignore any
+  column. Every row with an error or a note is listed, not only the first 25,
+  and so are the breeds and other terms the file would add.
+- **An unknown status is refused.** "Adoptable" instead of "Available" used to
+  create a new status, which hid those pets from every adoptable listing. A
+  status must now be one the site has, by name or slug.
+- **An import no longer changes a pet synced from a platform.** The next sync
+  would have undone it. Such rows are skipped with a note saying to edit the
+  pet on the platform. A synced pet's microchip is now found in its provider
+  data, so a shelter's own sheet no longer adds a copy of a synced pet.
+- **Re-importing an export no longer duplicates pets without a microchip.** A
+  row is matched on the `id` column of a file this site exported, unless the
+  pet's microchip says it is a different animal; otherwise on its microchip.
+  The preview notes an id match whose name differs, since a file from another
+  site would match unrelated pets. When several pets share a microchip, as a
+  re-listed animal's old draft copy does, the listed one is matched and the
+  preview names the others.
+- **Descriptions export as plain paragraphs.** The CSV export used to write a
+  description as HTML, with Petstablished's apostrophes as `&#039;`. It now
+  writes paragraphs separated by a blank line, and an import turns them back
+  into paragraphs in the editor's own format. A description with a list, a
+  link or other structure travels as its markup, so nothing is lost.
+- **Every breed and color is exported, not just the first.** A cell lists
+  them separated by `|`, and the import reads them the same way. In JSON they
+  are lists.
+- **Spreadsheets as Excel saves them import cleanly.** A file in Excel's
+  older Windows "CSV" format (Windows-1252) is converted, so accented letters
+  and curly apostrophes no longer fail with "Could not insert post into the
+  database". A file separated by semicolons, as Excel writes in much of
+  Europe, is read as such. The preview says when either happened.
+- **The JSON export says `"portable"` instead of `"importable"`.** Nothing
+  imports JSON; the flag says whether its columns are the ones a CSV import
+  reads.
+- **`bonded_names` holds bonded partners only.** For a synced pet it was
+  Petstablished's siblings list, which includes littermates outside the
+  bonded group, and the export carried it that way. It is now the names of
+  the group's other members. A value entered by hand is kept as typed.
 
 ### Removed
 - **The `wp shelterkit` WP-CLI commands.** Use `wp shelterkit-pets export`,
@@ -570,5 +572,14 @@ record is affected.
 - Built on the WordPress Abilities API and Block Bindings; server-rendered blocks with no build step.
 - Uninstall handler with an opt-in "Delete all data when this plugin is deleted" setting (default off, so delete + reinstall loses nothing). Ephemeral state (cron event, transients) is always cleaned up; pets, `pet_*` taxonomy terms, Site Editor template customizations, options, and per-user favorites/comparison meta are removed only when opted in (multisite-aware).
 
-[Unreleased]: https://github.com/jwincek/shelterkit-pets/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/jwincek/shelterkit-pets/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/jwincek/shelterkit-pets/compare/v1.6.0...v2.0.0
+[1.6.0]: https://github.com/jwincek/shelterkit-pets/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/jwincek/shelterkit-pets/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/jwincek/shelterkit-pets/compare/v1.3.1...v1.4.0
+[1.3.1]: https://github.com/jwincek/shelterkit-pets/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/jwincek/shelterkit-pets/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/jwincek/shelterkit-pets/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/jwincek/shelterkit-pets/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/jwincek/shelterkit-pets/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/jwincek/shelterkit-pets/releases/tag/v1.0.0
