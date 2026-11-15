@@ -46,8 +46,8 @@ release gathers them under the version number. On a branch named
 - **Minor** for new settings, deprecations, and changes to what an ability, the
   REST API or a hook returns. 1.6.0 was minor because microchip numbers
   stopped being returned to visitors.
-- **Major** for removing something deprecated, such as the old `wp shelterkit`
-  commands, or for anything on the
+- **Major** for removing something deprecated, as 2.0.0 removed the old
+  `wp shelterkit` commands, or for anything on the
   [must-not-change list](CONTRIBUTING.md#what-must-not-change).
 
 ## Publishing

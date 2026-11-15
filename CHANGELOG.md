@@ -111,6 +111,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   file, which the preview checks. The portable export now carries each
   pet's main photo, so a restore brings the pictures back.
 
+### Removed
+- **The `wp shelterkit` WP-CLI commands.** Use `wp shelterkit-pets export`,
+  `import` and `migrate`, which 1.6.0 introduced; the old names have warned
+  since then. `wp shelterkit` is left free for the ShelterKit family as a
+  whole.
+
 ### Fixed
 - A bonded pet whose partner was not listed was shown as bonded with all its
   Petstablished siblings, some of them in other pairs or in no pair at all.

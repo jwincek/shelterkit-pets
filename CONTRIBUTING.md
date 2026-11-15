@@ -236,9 +236,9 @@ that can be reached to fix it up.
 - CSV export column headings. They land in spreadsheets no migration can
   reach, so if one must change, the importer has to accept the old heading
   forever.
-- The WP-CLI commands `wp shelterkit-pets export|import|migrate`, and the
-  deprecated `wp shelterkit` names until they are removed in a deliberate
-  release
+- The WP-CLI commands `wp shelterkit-pets export|import|migrate`. Never
+  `wp shelterkit`, which belongs to the ShelterKit family as a whole; this
+  plugin used it until 2.0.0
 
 The `Petsync\` namespace, `Petsync_` classes, `PETSYNC_` constants, `petsync-`
 script handles and admin page slugs are internal, and deliberately do **not**
