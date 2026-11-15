@@ -339,6 +339,7 @@ class Pet_Hydrator {
 		$api_fields = $config['api_fields'] ?? [];
 		$provider   = Provider_Map::for_pet( $id );
 		$editable   = $config['editable_fields'] ?? [];
+		$typed      = []; // Fields whose value staff entered by hand.
 		// Deliberately NOT filtered by $include_fields.
 		//
 		// Computed fields are derived from this entity, so filtering here left
@@ -375,7 +376,8 @@ class Pet_Hydrator {
 				// it — the safer of the two behaviours, since the provider
 				// remains the source of record for those pets.
 				if ( '' !== $manual && null !== $manual && false !== $manual ) {
-					$raw = $manual;
+					$raw                  = $manual;
+					$typed[ $field_name ] = true;
 				}
 			}
 
@@ -418,6 +420,15 @@ class Pet_Hydrator {
 			}
 
 			$entity[ $field_name ] = $value;
+		}
+
+		// bonded_names means the bonded partners and nothing else (#137). The
+		// provider's value is not that: Petstablished's is siblings_names, which
+		// lists littermates outside the bonded group. So unless staff typed the
+		// names, they are rebuilt from the group. This is also what the export
+		// carries, so a file re-imported elsewhere marks the same animals bonded.
+		if ( array_key_exists( 'bonded_names', $entity ) && empty( $typed['bonded_names'] ) ) {
+			$entity['bonded_names'] = implode( ', ', array_column( self::group_partners( $id, $entity ), 'name' ) );
 		}
 
 		// The registered `fields` (ps_id, api_response, api_hash) are internal
@@ -636,6 +647,7 @@ class Pet_Hydrator {
 			'videos' => self::compute_videos( $entity ),
 			'is_bonded_pair' => self::compute_is_bonded_pair( $entity ),
 			'bonded_pair_names' => self::compute_bonded_pair_names( $id, $entity ),
+			'bonded_pair_summary' => self::compute_bonded_pair_summary( $id, $entity ),
 			'special_needs_summary' => self::compute_special_needs_summary( $entity ),
 			default => null,
 		};
@@ -884,78 +896,167 @@ class Pet_Hydrator {
 	}
 
 	/**
-	 * Check if this pet is part of a bonded pair/group.
+	 * Whether this pet is part of a bonded pair or group.
 	 *
-	 * Reads from the hydrated entity's bonded_group_id (sourced from API JSON).
+	 * Either the provider put it in a group, or staff entered the names of the
+	 * animals it is bonded with. The second is the only way to mark a
+	 * hand-entered pet: bonded_group_id has no manual equivalent (#137).
 	 */
 	private static function compute_is_bonded_pair( array $entity ): bool {
-		return ! empty( $entity['bonded_group_id'] );
+		return ! empty( $entity['bonded_group_id'] )
+			|| [] !== self::split_names( (string) ( $entity['bonded_names'] ?? '' ) );
 	}
 
 	/**
-	 * Resolve bonded pair partner names.
+	 * Who this pet is bonded with.
 	 *
-	 * Strategy:
-	 * 1. Read grouped_pet_ids from API JSON (array of Petstablished IDs).
-	 * 2. Look up local posts by _pet_ps_id to resolve names.
-	 * 3. Exclude the current pet from the list.
-	 * 4. Fall back to siblings_names if no local matches found.
+	 * A provider group decides, when there is one. Otherwise these are the
+	 * names staff entered, which are names only: linking "Max" to whichever
+	 * listed pet is called Max would send a visitor to the wrong animal.
 	 *
-	 * Returns an array of [ 'id' => local_post_id|null, 'name' => string ].
+	 * @return array<int, array{id: int|null, name: string, url: string}>
 	 */
 	private static function compute_bonded_pair_names( int $id, array $entity ): array {
+		if ( ! empty( $entity['bonded_group_id'] ) ) {
+			return self::group_partners( $id, $entity );
+		}
+
+		return array_map(
+			static fn( string $name ): array => [
+				'id'   => null,
+				'name' => $name,
+				'url'  => '',
+			],
+			self::split_names( (string) ( $entity['bonded_names'] ?? '' ) )
+		);
+	}
+
+	/**
+	 * The other members of this pet's provider group.
+	 *
+	 * Each member is resolved on its own. A listed local pet gives its name and
+	 * a link. Otherwise the name comes from the provider's siblings entry for
+	 * that record, unlinked, since the pet has no public page. A member with
+	 * neither is left out.
+	 *
+	 * Siblings outside the group are never partners. On the VCHS install,
+	 * Chong's siblings include Cheech, who is not in Chong's group, and Patch,
+	 * Lefty, Nico and Roxy are siblings but two separate pairs. The old code fell
+	 * back to the whole siblings list whenever no partner was listed.
+	 *
+	 * @return array<int, array{id: int|null, name: string, url: string}>
+	 */
+	private static function group_partners( int $id, array $entity ): array {
 		if ( empty( $entity['bonded_group_id'] ) ) {
 			return [];
 		}
-
-		$ps_ids = $entity['bonded_pet_ids'] ?? [];
 
 		// Our own meta key, not the provider's `id`. The record id is already
 		// stored under _pet_ps_id by the sync, so there is no reason to reach
 		// back into the raw snapshot for it.
 		$config    = self::get_config();
 		$own_ps_id = (int) get_post_meta( $id, ( $config['meta_prefix'] ?? '_pet_' ) . 'ps_id', true );
+		$siblings  = self::provider_sibling_names( $id );
 
 		$partners = [];
-		if ( is_array( $ps_ids ) ) {
-			foreach ( $ps_ids as $ps_id ) {
-				$ps_id = (int) $ps_id;
-				if ( $ps_id === $own_ps_id ) {
-					continue;
-				}
-
-				$partner_id = self::resolve_ps_id( $ps_id );
-
-				if ( $partner_id ) {
-					$partners[] = [
-						'id'   => $partner_id,
-						'name' => get_the_title( $partner_id ),
-						'url'  => get_permalink( $partner_id ),
-					];
-				}
+		foreach ( (array) ( $entity['bonded_pet_ids'] ?? [] ) as $ps_id ) {
+			$ps_id = (int) $ps_id;
+			if ( $ps_id <= 0 || $ps_id === $own_ps_id ) {
+				continue;
 			}
-		}
 
-		// Fall back to siblings_names from API.
-		if ( empty( $partners ) ) {
-			$siblings_str = $entity['bonded_names'] ?? '';
-			if ( $siblings_str ) {
-				$parts = array_map( 'trim', explode( ',', $siblings_str ) );
-				foreach ( $parts as $part ) {
-					if ( ! $part ) {
-						continue;
-					}
-					$clean_name = preg_replace( '/\s+PS\d+$/', '', $part );
-					$partners[] = [
-						'id'   => null,
-						'name' => $clean_name,
-						'url'  => '',
-					];
-				}
+			$partner_id = self::resolve_ps_id( $ps_id );
+
+			if ( $partner_id ) {
+				// The raw title, as the pet's own `name` is. get_the_title()
+				// texturizes, which put `&#8217;` into exported CSV cells.
+				$partners[] = [
+					'id'   => $partner_id,
+					'name' => (string) get_post_field( 'post_title', $partner_id, 'raw' ),
+					'url'  => (string) get_permalink( $partner_id ),
+				];
+			} elseif ( isset( $siblings[ $ps_id ] ) ) {
+				$partners[] = [
+					'id'   => null,
+					'name' => $siblings[ $ps_id ],
+					'url'  => '',
+				];
 			}
 		}
 
 		return $partners;
+	}
+
+	/**
+	 * The provider's sibling names, keyed by record ID.
+	 *
+	 * Read from the snapshot rather than the entity, because the entity's
+	 * bonded_names is rebuilt from the group and no longer holds them.
+	 * Petstablished writes each entry as "Lefty PS2795284". An entry without a
+	 * record ID cannot be matched to a group member, so it is skipped rather than
+	 * guessed at.
+	 *
+	 * @param int $id Post ID.
+	 * @return array<int, string>
+	 */
+	private static function provider_sibling_names( int $id ): array {
+		$key = Provider_Map::key_for( Provider_Map::for_pet( $id ), 'bonded_names' );
+		$raw = null !== $key ? ( self::get_api_data( $id )[ $key ] ?? '' ) : '';
+
+		$names = [];
+		foreach ( self::split_names( is_string( $raw ) ? $raw : '' ) as $entry ) {
+			if ( preg_match( '/^(.+?)\s+PS(\d+)$/', $entry, $m ) ) {
+				$names[ (int) $m[2] ] = $m[1];
+			}
+		}
+
+		return $names;
+	}
+
+	/**
+	 * Split a list of names typed by hand.
+	 *
+	 * Commas, semicolons, `|` (the export's list separator) and line breaks
+	 * separate names. "and" does not: "Salt and Pepper" is one pet.
+	 *
+	 * @param string $names Names as entered.
+	 * @return string[]
+	 */
+	private static function split_names( string $names ): array {
+		return array_values(
+			array_filter(
+				array_map( 'trim', (array) preg_split( '/[,;|\r\n]+/', $names ) ),
+				static fn( string $name ): bool => '' !== $name
+			)
+		);
+	}
+
+	/**
+	 * One sentence saying who this pet must be adopted with.
+	 *
+	 * For places that can only show text: a printed kennel card has no popover.
+	 * Empty when the pet is not bonded, so a bound paragraph collapses.
+	 */
+	private static function compute_bonded_pair_summary( int $id, array $entity ): string {
+		if ( ! self::compute_is_bonded_pair( $entity ) ) {
+			return '';
+		}
+
+		$partners = $entity['bonded_pair_names'] ?? self::compute_bonded_pair_names( $id, $entity );
+		$names    = array_column( (array) $partners, 'name' );
+
+		// Short on purpose. On a 4×6 card the line sits beside the photo with
+		// room for one line, and "must be adopted together" wrapped to two and
+		// pushed tight cards past the cell, clipping the footer.
+		if ( ! $names ) {
+			return __( 'Bonded pair: adopt together.', 'shelterkit-pets' );
+		}
+
+		return sprintf(
+			/* translators: %s: the partners' names as a list, e.g. "Val" or "Lefty and Nico". Keep it short: it has one line beside the photo on a 4x6 kennel card. */
+			__( 'Bonded with %s: adopt together.', 'shelterkit-pets' ),
+			wp_sprintf( '%l', $names )
+		);
 	}
 
 	/**

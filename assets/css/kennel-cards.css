@@ -154,6 +154,23 @@
 }
 
 
+/* Who the pet must be adopted with. It sits in the name column beside the
+   photo, which is taller than the name and banner, so one line costs no height.
+   A second line does, which is why the wording is short and the index size
+   smaller. Empty for a pet that is not bonded, and collapsed by p:empty above. */
+.kennel-card__bonded {
+	margin: 0;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+/* Core's flow layout drops the last child's bottom margin. The banner was the
+   last child until the line followed it; without this, an unbonded pet's card
+   grew 6px on a full page because of a line it does not show. */
+.kennel-card__banner:has(+ .kennel-card__bonded:empty) {
+	margin-bottom: 0;
+}
+
 .kennel-card__attributes,
 .kennel-card__health {
 	font-size: 0.95em;
@@ -462,6 +479,14 @@
 .petsync-cards--index .kennel-card__name {
 	margin-bottom: 0.2em;
 	font-size: 1.5em;
+}
+
+/* About 15px is free beside the photo at this size: one line at this size, not
+   two. Measured against the VCHS listings, a second line pushed the tightest
+   card 2px past its cell. */
+.petsync-cards--index .kennel-card__bonded {
+	font-size: 0.85em;
+	line-height: 1.2;
 }
 
 /*

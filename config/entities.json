@@ -224,7 +224,7 @@
         "bonded_names": {
           "group": "basics",
           "control": "text",
-          "label": "Bonded with (names)"
+          "label": "Bonded with (names, comma-separated)"
         },
         "shots_current": {
           "group": "health",
@@ -398,13 +398,19 @@
           "args": [
             "_self"
           ],
-          "description": "Whether this pet is part of a bonded pair/group."
+          "description": "Whether this pet is part of a bonded pair/group: it has a provider group, or bonded_names was entered by hand."
         },
         "bonded_pair_names": {
           "args": [
             "_self"
           ],
-          "description": "Names of bonded pair partners (resolved from local posts when possible)."
+          "description": "Bonded partners as {id, name, url}: the provider group's other members (linked when listed), or the names entered by hand (never linked). Siblings outside the group are not partners."
+        },
+        "bonded_pair_summary": {
+          "args": [
+            "_self"
+          ],
+          "description": "One sentence naming the bonded partners (e.g. 'Bonded with Val: adopt together.'), or empty when the pet is not bonded. For text-only places such as the kennel card."
         },
         "special_needs_summary": {
           "args": [
