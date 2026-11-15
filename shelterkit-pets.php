@@ -245,23 +245,10 @@ function petsync_init(): void {
 		\WP_CLI::add_command( 'shelterkit-pets import', \Petsync\Import\CLI::class );
 		\WP_CLI::add_command( 'shelterkit-pets migrate', \Petsync\CLI\Migrate::class );
 
-		// The old names, kept working but deprecated. `wp shelterkit` is the
-		// whole ShelterKit family's namespace, not this plugin's: ShelterKit
-		// Donations already uses `wp shelterkit-donations`, and a sibling's
-		// `wp shelterkit migrate` would collide with this one. Remove these
-		// once nobody can still be scripting the 1.1.0 names.
-		\WP_CLI::add_command( 'shelterkit', \Petsync\Export\CLI::class );
-		\WP_CLI::add_command( 'shelterkit import', \Petsync\Import\CLI::class );
-		\WP_CLI::add_command( 'shelterkit migrate', \Petsync\CLI\Migrate::class );
-
-		foreach ( array( 'export', 'import', 'migrate' ) as $subcommand ) {
-			\WP_CLI::add_hook(
-				"before_invoke:shelterkit $subcommand",
-				static function () use ( $subcommand ): void {
-					\WP_CLI::warning( "`wp shelterkit $subcommand` is deprecated and will be removed. Use `wp shelterkit-pets $subcommand`." );
-				}
-			);
-		}
+		// Not `wp shelterkit`. That is the whole ShelterKit family's namespace,
+		// not this plugin's: ShelterKit Donations uses `wp shelterkit-donations`,
+		// and a sibling's `wp shelterkit migrate` would collide with one here.
+		// The 1.1.0 names were deprecated in 1.6.0 and removed in 2.0.0 (#121).
 	}
 
 	// Admin & Sync (admin only).
@@ -401,7 +388,7 @@ function petsync_get_migrations(): array {
  * Run the migration rail.
  *
  * The single implementation, shared by the automatic `init` pass and
- * `wp shelterkit migrate`. A second copy would drift, and the thing most worth
+ * `wp shelterkit-pets migrate`. A second copy would drift, and the thing most worth
  * not drifting is the rule below about what gets recorded.
  *
  * @param bool               $dry_run    Report what would run without running it.
@@ -502,8 +489,9 @@ function petsync_run_migrations( bool $dry_run = false, ?callable $reporter = nu
  * (priority 11) both exist before a migration touches pet records.
  *
  * Deliberately does nothing under WP-CLI. Two reasons, and the second is the
- * one that matters: an operator at a terminal can run `wp shelterkit migrate`
- * and watch it, which is the whole point of that command existing; and a
+ * one that matters: an operator at a terminal can run
+ * `wp shelterkit-pets migrate` and watch it, which is the whole point of that
+ * command existing; and a
  * multi-second data migration should not fire as a side effect of an unrelated
  * command like `wp plugin list`. Web traffic still triggers the rail normally,
  * so a site that is never migrated from the command line still migrates itself.
