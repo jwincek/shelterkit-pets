@@ -1,0 +1,49 @@
+name,animal,breed,status,sex,age,size,color,coat,weight,numerical_age,adoption_fee,spayed_neutered,shots_current,housebroken,ok_with_dogs,ok_with_cats,ok_with_kids,has_special_needs,special_needs_detail,bonded_names,image,gallery,description
+Rocco,Dog,Boxer,Available,Male,Adult,Large,Fawn,Short,68 lbs,"4 years, 3 months",150,yes,yes,yes,yes,unknown,yes,,,,rocco.jpg,rocco-2.jpg|rocco-3.jpg|rocco-4.jpg,"Rocco is a goofy, big-hearted boxer who greets everyone like an old friend. He knows sit, down and paw, and he will offer all three at once if he thinks there is a treat involved.
+
+He walks well on a leash, loves a game of tug and is happiest with a family that will take him on long weekend walks. He has met calm dogs at the shelter and got along with all of them."
+Cocoa,Dog,Labrador Retriever,Available,Female,Adult,Large,Chocolate,Short,61 lbs,"6 years, 1 month",125,yes,yes,yes,yes,yes,yes,,,,cocoa.jpg,,"Cocoa came to us when her family moved overseas. She is a gentle, steady girl who has lived with children and a cat, and she settles quickly in a new place.
+
+She would love a yard to sniff around and someone to throw a ball for her, though she will happily trade the game for a nap at your feet."
+Sunny,Dog,Labrador Retriever Mix,Adoption Pending,Female,Young,Large,Yellow,Short,54 lbs,"1 year, 8 months",175,yes,yes,no,yes,unknown,yes,,,,sunny.jpg,,"Sunny lives up to her name. She is bright, bouncy and still learning her manners, and she is working on house training with our volunteers.
+
+An application for Sunny is being reviewed. Ask us about her siblings in foster care."
+Maple,Dog,Boxer / Labrador Retriever Mix,Available,Female,Adult,Medium,Tan and White,Short,47 lbs,3 years,150,yes,yes,yes,yes,no,yes,,,,maple.jpg,,"Maple is a sweet, slightly shy girl who warms up fast once she knows you have snacks. She loves car rides and will lean her whole weight against your legs for a scratch.
+
+She chases cats, so she needs a home without them."
+Juno,Dog,American Staffordshire Terrier Mix,Available,Female,Young,Medium,Black,Short,49 lbs,"2 years, 5 months",125,yes,yes,yes,no,unknown,yes,,,,juno.jpg,,"Juno has the biggest smile in the building. She is clever, food-motivated and already knows a dozen tricks, including a very convincing bow.
+
+She would like to be the only dog in her home, where she can have all of your attention."
+Duke,Dog,Terrier Mix,Available,Male,Senior,Small,Black and Grey,Short,23 lbs,11 years,50,yes,yes,yes,yes,yes,yes,yes,Takes a daily joint supplement for mild arthritis.,,duke.jpg,,"Duke is a distinguished gentleman with a grey muzzle and a soft spot for blankets. He likes short walks, long naps and anyone who will rub his ears.
+
+He takes a joint supplement with breakfast and is otherwise in good health for his age. Our senior pets are offered at a reduced fee."
+Waffles,Dog,Beagle,Available,Male,Adult,Medium,Tricolor,Short,31 lbs,"5 years, 6 months",125,yes,yes,yes,yes,no,yes,,,,waffles.jpg,,"Waffles follows his nose everywhere, so a securely fenced yard is a must. He is friendly with people of every age and adores other dogs.
+
+He has a classic beagle voice and will use it to tell you dinner is late."
+Oreo,Cat,Domestic Short Hair,Available,Male,Young,Medium,Black and White,Short,10 lbs,"1 year, 2 months",75,yes,yes,yes,unknown,yes,yes,,,Domino,oreo.jpg,,"Oreo is the outgoing half of a bonded pair with his brother Domino. He is first to the door, first to the food bowl and first to investigate any open cupboard.
+
+The brothers have never been apart and must be adopted together."
+Domino,Cat,Domestic Short Hair,Available,Male,Young,Medium,Black and White,Short,11 lbs,"1 year, 2 months",75,yes,yes,yes,unknown,yes,yes,,,Oreo,domino.jpg,,"Domino is the calmer brother. He prefers a warm lap and a quiet room, and he relaxes when Oreo is nearby.
+
+The brothers have never been apart and must be adopted together."
+Luna,Cat,Siamese Mix,Available,Female,Adult,Medium,Seal Point,Short,8 lbs,4 years,95,yes,yes,yes,no,yes,unknown,,,,luna.jpg,,"Luna is chatty, curious and very fond of high places. Expect her to supervise your cooking from the top of the fridge.
+
+She has lived happily with other cats but is nervous around dogs."
+Willow,Cat,Domestic Long Hair,Available,Female,Young,Small,Brown Tabby and White,Long,7 lbs,9 months,95,yes,yes,yes,unknown,yes,yes,,,,willow.jpg,,"Willow has striking blue eyes and a silky coat that needs brushing a few times a week, which she tolerates for the treats that follow.
+
+She is playful and gentle, and she would do well in almost any home."
+Clementine,Cat,Domestic Short Hair,Available,Female,Senior,Large,Brown Tabby and White,Short,14 lbs,9 years,50,yes,yes,yes,unknown,no,yes,yes,"FIV positive. Healthy, but best as an only cat or with other FIV-positive cats.",,clementine.jpg,,"Clementine is a round, regal lady who knows exactly what she wants: a sunny window and dinner at six. She is affectionate on her own terms and purrs like an engine.
+
+She is FIV positive. That sounds scarier than it is: FIV cats live long, normal lives, and our staff are happy to talk it through."
+Shadow,Cat,Domestic Short Hair,On Hold,Male,Adult,Medium,Black,Short,12 lbs,"3 years, 4 months",75,yes,yes,yes,yes,yes,yes,,,,shadow.jpg,,"Shadow is a laid-back cat with golden eyes and a habit of following people from room to room.
+
+He is on hold while he finishes a course of dental treatment and will be available again soon."
+Marmalade,Cat,Domestic Short Hair,Available,Male,Adult,Large,Orange Tabby,Short,13 lbs,5 years,75,yes,yes,yes,yes,yes,yes,,,,marmalade.jpg,marmalade-2.jpg,"Marmalade is a big orange cat with a big orange personality. He likes everyone, including the dog he lived with before he came to us.
+
+He is a professional napper and an enthusiastic eater, so his new family will need to keep an eye on the treats."
+Smokey,Cat,Domestic Short Hair,Available,Male,Young,Medium,Grey,Short,9 lbs,2 years,75,yes,yes,yes,unknown,yes,unknown,,,,smokey.jpg,,"Smokey was found living in a garden and is still learning that people are good news. He takes a little time, but once he trusts you he is a devoted companion.
+
+A quiet home with patient adults would suit him best."
+Pippin,Rabbit,Holland Lop,Available,Male,Adult,Small,Fawn,Medium,4 lbs,"2 years, 1 month",40,yes,unknown,yes,no,unknown,yes,,,,pippin.jpg,,"Pippin is a litter-trained lop with soft ears and a love of fresh parsley. He enjoys gentle petting and will happily explore a rabbit-proofed room.
+
+Rabbits live for eight to twelve years, so he is looking for a family ready for the long haul."

@@ -1,0 +1,19 @@
+{
+	"_comment": "Days since each pet was listed. An import dates every pet today, which would mark all sixteen New and leave the newest-first order to chance. Applied by bin/demo-site.php after the import. New lasts 14 days, so only Rocco and Willow carry it.",
+	"Rocco": 2,
+	"Willow": 6,
+	"Domino": 16,
+	"Oreo": 16,
+	"Cocoa": 19,
+	"Juno": 23,
+	"Marmalade": 27,
+	"Luna": 31,
+	"Waffles": 36,
+	"Clementine": 42,
+	"Maple": 48,
+	"Shadow": 55,
+	"Duke": 63,
+	"Smokey": 71,
+	"Sunny": 80,
+	"Pippin": 92
+}
