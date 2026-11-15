@@ -591,6 +591,15 @@ class Petsync_Sync {
 			// used to keep it a draft for good.
 			$stored_hash = get_post_meta( $post_id, '_pet_api_hash', true );
 			if ( $stored_hash === $api_hash && get_post_status( $post_id ) === $post_data['post_status'] ) {
+				// Unchanged data can still mean a photo needs fetching: its file
+				// went missing (a database restored without uploads/), or its
+				// download failed on an earlier sync. Either way the shortcut
+				// used to leave the pet without a photo for good.
+				if ( self::photo_wanted( $post_id, $data ) ) {
+					$this->maybe_set_featured_image( $post_id, $data );
+					return 'updated';
+				}
+
 				return 'unchanged';
 			}
 
@@ -902,6 +911,54 @@ class Petsync_Sync {
 	 * @param int   $post_id Post ID.
 	 * @param array $data    Raw API response for this pet.
 	 */
+	/**
+	 * Whether the provider sends a photo this pet has no working copy of.
+	 *
+	 * @param int                  $post_id Pet.
+	 * @param array<string, mixed> $data    The provider's record.
+	 */
+	private static function photo_wanted( int $post_id, array $data ): bool {
+		if ( '' === \Petsync\Core\Provider_Map::first_image_url( $data, self::PROVIDER ) ) {
+			return false;
+		}
+
+		$thumbnail = (int) get_post_thumbnail_id( $post_id );
+
+		return ! $thumbnail || self::attachment_file_missing( $thumbnail );
+	}
+
+	/**
+	 * Whether an attachment's file is missing from this site.
+	 *
+	 * A database restored without wp-content/uploads/ brings back every
+	 * attachment record and none of the files, so a record is not proof of a
+	 * photo. Missing means WordPress would serve the photo from this site's
+	 * uploads folder and the file is not there: what a visitor sees as a broken
+	 * image. A media-offload plugin deletes local copies on purpose and points
+	 * the attachment's address at its own storage, so those count as present,
+	 * or every sync would download them all again.
+	 *
+	 * Also used by the spreadsheet import, so a re-import does not reuse a
+	 * download whose file has gone.
+	 *
+	 * @param int $attachment_id Attachment.
+	 */
+	public static function attachment_file_missing( int $attachment_id ): bool {
+		if ( $attachment_id <= 0 || ! get_post( $attachment_id ) ) {
+			return true;
+		}
+
+		$file = get_attached_file( $attachment_id );
+		if ( $file && file_exists( $file ) ) {
+			return false;
+		}
+
+		$url     = set_url_scheme( (string) wp_get_attachment_url( $attachment_id ), 'http' );
+		$uploads = set_url_scheme( trailingslashit( (string) ( wp_get_upload_dir()['baseurl'] ?? '' ) ), 'http' );
+
+		return '' !== $url && str_starts_with( $url, $uploads );
+	}
+
 	private function maybe_set_featured_image( int $post_id, array $data ): void {
 		// Via the provider's declared images shape, not a second copy of its
 		// nesting — the hydrator already reads the same declaration.
@@ -915,8 +972,11 @@ class Petsync_Sync {
 		$stored_source_url = get_post_meta( $post_id, '_pet_source_image_url', true );
 		$has_thumbnail     = has_post_thumbnail( $post_id );
 
-		if ( $has_thumbnail && $stored_source_url === $new_image_url ) {
-			// Image hasn't changed — nothing to do.
+		if ( $has_thumbnail
+			&& $stored_source_url === $new_image_url
+			&& ! self::attachment_file_missing( (int) get_post_thumbnail_id( $post_id ) )
+		) {
+			// Same photo, and its file is there — nothing to do.
 			return;
 		}
 
@@ -1168,8 +1228,17 @@ class Petsync_Sync {
 			return (int) apply_filters( 'petsync_max_image_edge', self::MAX_EDGE );
 		};
 
+		// A name another attachment still claims is not free, even when its
+		// file is gone. media_handle_sideload() files the photo under the pet
+		// post's date and the address's file name, so downloading a photo
+		// again after a database restore without uploads/ chose exactly the
+		// path the stale record names. Deleting that record then deleted the
+		// new photo with it.
+		$unclaimed = static fn( string $filename, string $ext, string $dir ): string => self::unclaimed_filename( $filename, $ext, $dir );
+
 		add_filter( 'intermediate_image_sizes_advanced', $limit_sizes, 10, 1 );
 		add_filter( 'big_image_size_threshold', $limit_edge, 10, 1 );
+		add_filter( 'wp_unique_filename', $unclaimed, 10, 3 );
 
 		try {
 			return media_sideload_image( $url, $post_id, $desc, 'id' );
@@ -1178,6 +1247,71 @@ class Petsync_Sync {
 			// leave these filters applied to every subsequent upload on the site.
 			remove_filter( 'intermediate_image_sizes_advanced', $limit_sizes, 10 );
 			remove_filter( 'big_image_size_threshold', $limit_edge, 10 );
+			remove_filter( 'wp_unique_filename', $unclaimed, 10 );
 		}
+	}
+
+	/**
+	 * $filename, or the first "name-N" after it that no file and no
+	 * attachment record claims.
+	 *
+	 * A record claims its file's name even when the file is missing, and a
+	 * photo over the size limit is stored as name-scaled.jpg, so a record
+	 * naming that claims "name.jpg" too.
+	 *
+	 * @param string $filename File name WordPress chose, free on disk.
+	 * @param string $ext      Its extension, with the dot.
+	 * @param string $dir      Absolute directory.
+	 */
+	private static function unclaimed_filename( string $filename, string $ext, string $dir ): string {
+		$base = trailingslashit( wp_normalize_path( (string) ( wp_get_upload_dir()['basedir'] ?? '' ) ) );
+		$dir  = trailingslashit( wp_normalize_path( $dir ) );
+		if ( ! str_starts_with( $dir, $base ) ) {
+			return $filename;
+		}
+
+		$subdir    = substr( $dir, strlen( $base ) );
+		$stem      = '' !== $ext && str_ends_with( $filename, $ext ) ? substr( $filename, 0, -strlen( $ext ) ) : $filename;
+		$candidate = $filename;
+
+		for ( $n = 1; $n < 100; $n++ ) {
+			$candidate_stem = '' !== $ext ? substr( $candidate, 0, -strlen( $ext ) ) : $candidate;
+			$claimed        = file_exists( $dir . $candidate )
+				|| self::attachment_claims( $subdir . $candidate )
+				|| self::attachment_claims( $subdir . $candidate_stem . '-scaled' . $ext );
+
+			if ( ! $claimed ) {
+				return $candidate;
+			}
+
+			$candidate = $stem . '-' . $n . $ext;
+		}
+
+		return $candidate;
+	}
+
+	/**
+	 * Whether an attachment record names this file, relative to uploads/.
+	 *
+	 * @param string $relative For example "2026/11/photo.jpg".
+	 */
+	private static function attachment_claims( string $relative ): bool {
+		$ids = get_posts(
+			array(
+				'post_type'   => 'attachment',
+				'post_status' => 'any',
+				'numberposts' => 1,
+				'fields'      => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- only while a photo is being saved, once per candidate name.
+				'meta_query'  => array(
+					array(
+						'key'   => '_wp_attached_file',
+						'value' => $relative,
+					),
+				),
+			)
+		);
+
+		return (bool) $ids;
 	}
 }

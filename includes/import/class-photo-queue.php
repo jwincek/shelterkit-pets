@@ -136,7 +136,7 @@ final class Photo_Queue {
 	}
 
 	/**
-	 * An attachment downloaded from this URL before, or 0.
+	 * An attachment downloaded from this URL before whose file is still here, or 0.
 	 *
 	 * @param string $url Photo URL.
 	 */
@@ -145,8 +145,10 @@ final class Photo_Queue {
 			array(
 				'post_type'   => 'attachment',
 				'post_status' => 'inherit',
-				'numberposts' => 1,
+				'numberposts' => -1,
 				'fields'      => 'ids',
+				'orderby'     => 'ID',
+				'order'       => 'DESC',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- one indexed key lookup per photo, during an import only.
 				'meta_query'  => array(
 					array(
@@ -157,7 +159,17 @@ final class Photo_Queue {
 			)
 		);
 
-		return (int) ( $ids[0] ?? 0 );
+		// Only a copy whose file is still there. After a database restore
+		// without uploads/, the record of an earlier download comes back with
+		// no file, and reusing it gave the pet a broken photo; downloading the
+		// address again is the only way to get the picture back.
+		foreach ( $ids as $id ) {
+			if ( ! \Petsync_Sync::attachment_file_missing( (int) $id ) ) {
+				return (int) $id;
+			}
+		}
+
+		return 0;
 	}
 
 	// ─── Queueing ───────────────────────────────────────────────────────────
