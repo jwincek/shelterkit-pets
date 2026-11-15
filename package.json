@@ -8,11 +8,13 @@
 		"start": "wp-env start",
 		"stop": "wp-env stop",
 		"lint:js": "wp-scripts lint-js assets/js/",
-		"lint:css": "wp-scripts lint-style 'assets/css/**/*.css' 'blocks/**/*.css'"
+		"lint:css": "wp-scripts lint-style 'assets/css/**/*.css' 'blocks/**/*.css'",
+		"screenshots": "node bin/screenshots.mjs"
 	},
 	"devDependencies": {
 		"@wordpress/env": "^10.0.0",
-		"@wordpress/scripts": "^30.0.0"
+		"@wordpress/scripts": "^30.0.0",
+		"playwright": "1.62.1"
 	},
 	"overrides": {
 		"typescript": "^6.0.0"

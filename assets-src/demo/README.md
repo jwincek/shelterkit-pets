@@ -11,6 +11,7 @@ for anyone who wants to see the plugin with something in it. It is not shipped:
 | `CREDITS.md` | Where each photo came from. All are CC0. |
 | `shelter.json` | Shelter Details for Larkspur Lane Animal Shelter. |
 | `listed.json` | How many days ago each animal was listed. |
+| `intake.csv` | The sheet screenshot 6 previews. `@Sunny` in the id column stands for Sunny's post ID on the site. |
 
 ## Loading it
 
@@ -51,6 +52,12 @@ shelter will actually get.
 - **Photos cropped for how they are shown.** Listings and galleries crop to
   landscape, so portrait photos were cropped to 4:3 around the animal's face
   rather than left to a center crop.
+
+## Screenshots
+
+`npm run screenshots` captures the WordPress.org screenshots from a site loaded
+with this data. [CONTRIBUTING.md](../../CONTRIBUTING.md#screenshots) has the
+steps.
 
 ## Changing it
 

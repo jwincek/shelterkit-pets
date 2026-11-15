@@ -121,7 +121,7 @@ weeks, so the order of submissions matters.
 
 ### Listing assets
 
-`.wordpress-org/` holds the banner, icons and `screenshot-N.png` files. The
+`.wordpress-org/` holds the banner, icons and `screenshot-N` files. The
 deploy copies it to SVN `assets/`, which sits beside `trunk/` rather than inside
 it, and `.distignore` keeps it out of the zip. `assets-src/` has the editable
 sources and how to regenerate them.
@@ -129,3 +129,8 @@ sources and how to regenerate them.
 Screenshots pair with the `== Screenshots ==` captions in `readme.txt` by
 number, not by filename. A gap attaches captions to the wrong images without
 any error; validator check 9 reports a mismatch.
+
+The screenshots are generated from a demo site (see
+[CONTRIBUTING.md](CONTRIBUTING.md#screenshots)). Regenerate them in the release
+pull request when the release changes a screen they show, and look at every
+one before committing.

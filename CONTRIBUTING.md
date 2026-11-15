@@ -74,7 +74,7 @@ runtime:
 6. `actions.X` / `callbacks.X` in block markup exist in a store.
 7. The sync's change-detection hash covers every field the sync reads.
 8. Every version declaration agrees with the plugin header.
-9. Screenshot captions pair with screenshot files (a warning until they exist).
+9. Screenshot captions pair with screenshot files.
 10. `uninstall.php` knows every name Site Editor customizations were filed under.
 11. Provider response paths are declared and well formed.
 12. `Requires at least` and `Tested up to` match the CI matrix.
@@ -198,6 +198,46 @@ live in `assets/css/kennel-cards.css`, which reaches every site.
   both.
 - **No inline `<script>` or `<style>`.** Enqueue a file, or pass values as
   custom properties on a block's wrapper.
+
+## Screenshots
+
+The WordPress.org screenshots in `.wordpress-org/` are generated, not taken by
+hand, from a demo site loaded with the fictional shelter in `assets-src/demo/`:
+
+1. Make a fresh WordPress site with ShelterKit Pets active and pretty
+   permalinks, for example a new Local site. Never a real shelter's site: the
+   script checks that Shelter Details name the demo shelter, and refuses
+   otherwise.
+2. Load the demo shelter:
+   `wp eval-file wp-content/plugins/shelterkit-pets/bin/demo-site.php import`.
+3. Once: `npm install`, then `npx playwright install chromium`.
+4. Capture:
+
+   ```sh
+   SKP_URL=http://larkspurlane.local SKP_SITE_ROOT="$HOME/Local Sites/larkspurlane/app/public" npm run screenshots
+   ```
+
+Look at every image before committing. The archive and the pet page are JPEG,
+because they are mostly photographs; the rest are PNG.
+
+The script drives Playwright's own Chromium, pinned by the exact Playwright
+version in `package.json`. An older Playwright paired with a newer browser
+stopped drawing frames after every form submission. It logs in by minting
+auth cookies through wp-cli, so it needs no password; pass `SKP_WP_ARGS` if
+wp-cli needs extra arguments to reach the database. It refuses to capture a
+kennel card sheet with a card that overflows its cell. The kennel cards print
+the site's address. To give them a tidy one while the site runs somewhere
+else, see `SKP_ORIGIN` in the header of `bin/screenshots.mjs`.
+
+Shot 6 previews `assets-src/demo/intake.csv`, a sheet with something to show:
+animals to add, an update, a refused status and an ignored column. Nothing
+is imported.
+
+**Numbering is load-bearing.** `screenshot-N` pairs with the Nth line of the
+`== Screenshots ==` block in `readme.txt`. A gap or a mismatch fails silently
+on WordPress.org: captions attach to the wrong image. The `SHOTS` array in
+`bin/screenshots.mjs` is the source of that order, and the script refuses to
+run if it and the readme disagree on the count.
 
 ## What must not change
 
