@@ -5,8 +5,10 @@ then a tag pushed from `main`. The tag drives everything else.
 
 ## The release pull request
 
-Fix pull requests do not write changelog entries; the release does, once, for
-everything merged since the last tag. On a branch named `chore/vX.Y.Z`:
+Each pull request adds its own entries under `[Unreleased]` in `CHANGELOG.md`,
+written for the people who run the plugin, while the details are fresh. The
+release gathers them under the version number. On a branch named
+`chore/vX.Y.Z`:
 
 1. **Bump every version declaration:**
 
@@ -18,9 +20,10 @@ everything merged since the last tag. On a branch named `chore/vX.Y.Z`:
    `Stable tag`, `package.json` and all 21 `block.json` files. Validator
    check 8 fails the build if any of them disagree.
 
-2. **Write `CHANGELOG.md`.** Move `[Unreleased]` to `[X.Y.Z] - date`, grouped
-   as Security, Added, Changed, Deprecated and Fixed, written for the people
-   who run the plugin.
+2. **Finish `CHANGELOG.md`.** Rename `[Unreleased]` to `[X.Y.Z] - date`,
+   check it is grouped as Security, Added, Changed, Deprecated and Fixed, and
+   read it through once as a whole: entries written one pull request at a time
+   can repeat or contradict each other.
 
 3. **Write `readme.txt`:** a `= X.Y.Z =` entry under `== Changelog ==`, and an
    entry under `== Upgrade Notice ==` of **300 characters or fewer**, which is

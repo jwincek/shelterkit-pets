@@ -8,13 +8,13 @@ Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Adoptable pet listings and printable kennel cards for animal shelters — add pets by hand or sync from Petstablished.
+Adoptable pet listings and printable kennel cards for animal shelters — add pets by hand, from a spreadsheet, or sync from Petstablished.
 
 == Description ==
 
 ShelterKit Pets puts your shelter's adoptable animals on your own website as a custom post type, then gives you a full set of blocks to display and filter them on the front end — so the listings live on your domain, get indexed by search engines, and match your theme, rather than sitting inside a third-party embed.
 
-Add animals by hand from the WordPress editor, or connect a Petstablished account and have them imported and kept up to date automatically. Both work the same on the front end, and the two can be mixed — a sync only ever touches the pets it imported itself.
+Add animals by hand from the WordPress editor, import them from a spreadsheet, or connect a Petstablished account and have them imported and kept up to date automatically. All three work the same on the front end, and they can be mixed — a sync only ever touches the pets it imported itself.
 
 Kennel cards print straight from the same records, so the card on the kennel and the listing on your website never disagree — and nobody retypes an animal's details into a word processor.
 
@@ -24,14 +24,15 @@ Petstablished is the supported platform today; support for additional shelter-ma
 
 **Features**
 
-* Printable kennel cards: pick the animals, choose a size, print. Four to a sheet, two to a sheet, or one per page.
+* Printable kennel cards: pick the animals, choose a size, print. Four to a sheet, two to a sheet, or one per page. A bonded pet's card names the animal it must be adopted with.
 * The card's design is a block template part — rearrange it once in the Site Editor and every card follows.
 * Choose which details each card carries: every attribute and health field has its own switch, so a card read from a corridor can drop what a web page has room for.
 * Add pets by hand in the WordPress editor — adoption fee, health, and compatibility details in grouped sidebar panels.
+* Import a spreadsheet, photos included, with a preview of every row before anything is written. Export to CSV or JSON in the same format, for editing or as a backup.
 * Optional batched sync from Petstablished, with an admin progress UI and WP-Cron scheduling.
 * Pet blocks: cards, listing grid, slider, filters, gallery, attributes, health, compatibility, comparison, favorites, adoption CTA, and more.
 * Adoption call-to-action links to the pet's Petstablished application form, an internal page of your choice, or a downloadable PDF application.
-* Taxonomy filtering (species, breed, age, size, gender, color) plus URL-driven compatibility filters (good with dogs/cats/kids, house-trained, etc.).
+* Taxonomy filtering (species, breed, age, size, sex, color, coat and status) plus URL-driven compatibility filters (good with dogs/cats/kids, house-trained, hypoallergenic, declawed). A breed or color link anywhere on the site opens the pet archive with that filter applied.
 * Block Bindings connect block attributes to pet data.
 * Anonymous favorites and side-by-side comparison that work without a login.
 * Toast notifications confirm favorites, comparison, and sharing actions — visible on screen and announced to screen readers.
@@ -42,14 +43,14 @@ Of the shelter platforms named above, only Petstablished is ever contacted. The 
 
 == External services ==
 
-This plugin uses up to three external services, described below. Without a Petstablished API key, your site's server makes no external requests at all, and the only thing a visitor's browser loads from elsewhere is a YouTube video you have added to a pet.
+This plugin uses up to three external services, described below, and downloads photos from addresses you give it in a spreadsheet. Without a Petstablished API key, your site's server contacts another site only when you import a spreadsheet with photo addresses, and the only thing a visitor's browser loads from elsewhere is a YouTube video you have added to a pet.
 
 = Petstablished =
 
 The plugin can connect to the Petstablished public API to import your shelter's adoptable pet listings. The connection is **optional** — it is used only if you enter a Petstablished API key.
 
 * **What it does:** retrieves your organization's pet records (name, photos, breed, age, description, and adoption status).
-* **What is sent and when:** your Petstablished public API key and pagination parameters are sent to `https://petstablished.com/api/v2/public/pets`. Requests are made only when you click **Sync Now** in the admin, or on the schedule you configure for the automatic sync (WP-Cron). No visitor data and no personal data from your site are ever sent.
+* **What is sent and when:** your Petstablished public API key, pagination parameters and, if you have chosen **Species to sync**, those species are sent to `https://petstablished.com/api/v2/public/pets`. Requests are made only when you click **Sync Now** in the admin, or on the schedule you configure for the automatic sync (WP-Cron). No visitor data and no personal data from your site are ever sent.
 * **Where it goes:** Petstablished (petstablished.com).
 
 Review Petstablished's terms and privacy policy before use:
@@ -61,10 +62,17 @@ Review Petstablished's terms and privacy policy before use:
 
 Petstablished keeps pet photos on Amazon Web Services (currently `s3.us-east-1.amazonaws.com`), and the plugin uses them in two ways. Pets added by hand use only photos from your own Media Library and are not affected.
 
-* **During a sync:** your server copies each imported pet's main photo into your Media Library, so cards and listings are served from your own site. Nothing from your site is sent with the request, and a photo that has not changed is not downloaded again.
+* **During a sync:** your server copies each imported pet's main photo into your Media Library, so cards and listings are served from your own site. Nothing from your site is sent except what WordPress includes in every request it makes, which names your site's address, and a photo that has not changed is not downloaded again.
 * **On a pet's page:** the Pet Gallery block shows an imported pet's other photos directly from Petstablished's storage, so the visitor's browser loads them from Amazon Web Services, which receives the visitor's IP address and browser details.
 * **Where it goes:** Amazon Web Services, hosting the photos on Petstablished's behalf. The photos themselves are covered by Petstablished's terms above.
 * AWS Privacy Notice: https://aws.amazon.com/privacy/
+
+= Photo addresses in an imported spreadsheet =
+
+A spreadsheet imported under **Pets → Import** can give each pet's photos as web addresses, in `image` and `gallery` columns. Your server downloads each photo into your Media Library so it is served from your own site.
+
+* **What is sent and when:** a request for each photo address in the file, made only after someone who can import pets confirms the import, a few at a time in the background. A photo already in your Media Library, or downloaded by an earlier import, is not requested again. Nothing from your site is sent except what WordPress includes in every request it makes, which names your site's address.
+* **Where it goes:** wherever each address points, which is chosen by whoever prepared the spreadsheet, not by the plugin. Only public `http` and `https` addresses ending in an image file are accepted. An address on your own network is refused, and the preview lists any address that will not be downloaded.
 
 = YouTube =
 
@@ -138,11 +146,19 @@ You can enable automatic syncing on a schedule from the Sync Settings screen. It
 
 = Will syncing delete pets that are no longer in Petstablished? =
 
-Pets that are no longer returned by the Petstablished API are removed on the next sync so your site reflects current availability.
+No. A pet that is no longer in Petstablished's listing is unpublished (set to draft) on the next sync, and the Pets list says why. If it comes back, the next sync publishes it again. Nothing is deleted, and pets added by hand or from a spreadsheet are never touched by a sync.
 
 = Is a build step required? =
 
 No. The blocks use the WordPress Interactivity API and ship as ready-to-run source — no compilation needed.
+
+= How should I back up my pets? =
+
+Back up the database as often as the rest of your site. Every pet's details live there. A sync can recreate the pets it imports from Petstablished, but nothing can recreate the ones you added by hand or from a spreadsheet.
+
+Back up your Media Library folder (`wp-content/uploads/`) too. Each pet's main photo is a file there, including the ones copied from Petstablished, as is every photo you uploaded yourself. A sync does not download a photo again once it has one on record, so a database restored without that folder leaves pets without photos.
+
+**Pets → Export**, with unpublished pets included, gives you a spreadsheet of every pet that imports straight back into an empty site. It records each pet's main photo by its address, so an import on a new site downloads them again while the old site is still online. Gallery images are not in the export.
 
 = What happens to my data if I delete the plugin? =
 

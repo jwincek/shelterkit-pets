@@ -15,10 +15,12 @@ Add animals by hand, import a spreadsheet, or sync from
 
 - **Printable kennel cards.** Pick the animals, choose a size (four, two or one
   to a sheet), print. The card is a template part you rearrange in the Site
-  Editor, and every field on it is a block binding.
+  Editor, and every field on it is a block binding. A bonded pet's card names
+  the animal it must be adopted with.
 - **Three ways in.** Enter a pet in the editor, import a CSV from
-  **Pets → Import** (headings are matched loosely, and every row is previewed
-  before anything is written), or connect Petstablished and sync on a schedule.
+  **Pets → Import** (headings are matched loosely, photos come in from `image`
+  and `gallery` address columns, and every row is previewed before anything is
+  written), or connect Petstablished and sync on a schedule.
   The three can be mixed: a sync only ever touches the pets it imported.
 - **Export** to CSV or JSON in the same format the importer reads.
 - **21 blocks:** pet cards, listing grid, slider, filters, gallery,
@@ -54,9 +56,10 @@ carries tests, tooling and CI configuration that the release build strips out.
 
 ## Privacy
 
-Without a Petstablished key, your server contacts no outside service at all.
-With one, it fetches your listings from Petstablished, whose photos are hosted
-on Amazon Web Services. A pet's YouTube video is embedded from YouTube's
+Without a Petstablished key, your server contacts another site only to
+download photos from addresses given in an imported spreadsheet. With a key,
+it also fetches your listings from Petstablished, whose photos are hosted on
+Amazon Web Services. A pet's YouTube video is embedded from YouTube's
 privacy-enhanced domain. The **External services** section of
 [`readme.txt`](readme.txt) says exactly what is sent, when, and where.
 
