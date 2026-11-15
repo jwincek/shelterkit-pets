@@ -631,15 +631,45 @@ function petsync_migrate_3_default_status(): void {
 		register_taxonomy( $legacy, 'vcps_pet' );
 	}
 
+	// The term's own name, not its slug. wp_set_object_terms() takes a string
+	// as a name, so passing the slug made a term called "available"; where
+	// migration 9 then kept it over the real "Available", every status label
+	// on the site came out lowercase.
+	$name = $default;
+	foreach ( $taxonomies['vcps_pet_status']['default_terms'] ?? array() as $term ) {
+		if ( ( $term['slug'] ?? null ) === $default ) {
+			$name = (string) ( $term['name'] ?? $default );
+		}
+	}
+
 	try {
 		foreach ( $pet_ids as $pet_id ) {
+			// A pet with a status under the new name was made by 2.0 or later and
+			// needs nothing. The rail can run after such pets exist: on a site set
+			// up and filled from WP-CLI, which skips the rail until the first page
+			// load. Giving each of them "available" under the old name made
+			// migration 9 merge that term over the real one, deleting "Available"
+			// and marking every pet available, adopted ones included (#145).
+			$current = wp_get_object_terms( $pet_id, 'vcps_pet_status', array( 'fields' => 'ids' ) );
+			if ( is_wp_error( $current ) || ! empty( $current ) ) {
+				continue;
+			}
+
 			$existing = wp_get_object_terms( $pet_id, $legacy, array( 'fields' => 'ids' ) );
 
 			if ( is_wp_error( $existing ) || ! empty( $existing ) ) {
 				continue;
 			}
 
-			wp_set_object_terms( $pet_id, $default, $legacy );
+			$term = term_exists( $default, $legacy );
+			if ( ! $term ) {
+				$term = wp_insert_term( $name, $legacy, array( 'slug' => $default ) );
+			}
+			if ( is_wp_error( $term ) ) {
+				continue;
+			}
+
+			wp_set_object_terms( $pet_id, (int) $term['term_id'], $legacy );
 		}
 	} finally {
 		if ( ! $registered ) {
