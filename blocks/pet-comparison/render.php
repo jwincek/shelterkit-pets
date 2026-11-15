@@ -303,9 +303,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 									array(
 										'width'  => 18,
 										'height' => 18,
-									),
-									"state.isFavorited ? 'currentColor' : 'none'",
-									$is_favorited ? 'currentColor' : 'none'
+									)
 								);
 							?>
 						</button>
@@ -426,9 +424,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 										array(
 											'width'  => 16,
 											'height' => 16,
-										),
-										"state.isFavorited ? 'currentColor' : 'none'",
-										$is_favorited ? 'currentColor' : 'none'
+										)
 									);
 								?>
 							</button>

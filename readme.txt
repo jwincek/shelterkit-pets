@@ -4,7 +4,7 @@ Tags: pets, adoption, animal shelter, rescue, animals
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.6.0
+Stable tag: 2.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -179,6 +179,23 @@ Pet photos are kept either way. They are ordinary Media Library items and may be
 
 == Changelog ==
 
+= 2.0.0 =
+* New: import photos from a spreadsheet. Photo addresses in `image` and `gallery` columns are downloaded in the background.
+* New: export can include unpublished pets, for a complete backup that restores drafts as drafts.
+* New: choose which species to sync from Petstablished. Leave it empty to sync every species.
+* New: kennel cards name the animal a bonded pet must be adopted with.
+* Changed: a synced pet is shown only if its status is one you choose (Available, Adoption Pending and On Hold by default), and only an available pet offers the adoption application. The Pets list says why a pet is not shown.
+* Changed: the import preview is now the confirmation step, with a dropdown to change how each column is read.
+* Changed: a breed, color or other pet term link opens the pet archive filtered to that term.
+* Changed: the pet taxonomies are named `vcps_pet_*`. Page addresses and the REST API keep the old names; code that queries `pet_breed` and the others by name needs the new ones.
+* Removed: the `wp shelterkit` WP-CLI commands. Use `wp shelterkit-pets`.
+* Fixed: newly synced pets were missing from compatibility filters such as "Good with dogs".
+* Fixed: a pet back in Petstablished's listing stayed a draft, and pets still listed could look stale after a week.
+* Fixed: an export of synced pets could not be imported back, and re-importing an export emptied galleries and descriptions and published drafts.
+* Fixed: a bonded pet could be shown as bonded with its littermates, and names entered by hand did not mark a pet bonded.
+* Fixed: after a database was restored without the uploads folder, synced pets' photos never came back.
+* Fixed: a favorited pet's heart never filled, and pet pages logged a PHP notice on sites with debugging on.
+
 = 1.6.0 =
 * Security: microchip numbers could be read by any visitor through the REST API and the plugin's public abilities, although no page showed them. They are now visible only to people who can edit the pet.
 * New: 25 block settings that existed but could not be changed, across the Pet Comparison, Pet Filters and Pet Gallery blocks.
@@ -248,6 +265,9 @@ Pet photos are kept either way. They are ordinary Media Library items and may be
 * Built on the WordPress Abilities API and Block Bindings.
 
 == Upgrade Notice ==
+
+= 2.0.0 =
+Synced pets are now shown only if Available, Adoption Pending or On Hold. An edited kennel card won't get the new bonded-pair line: see the FAQ. Developers: taxonomies are now vcps_pet_* (update pet_breed etc. in code), and `wp shelterkit` CLI is gone; use `wp shelterkit-pets`.
 
 = 1.6.0 =
 Security: any visitor could read pets' microchip numbers through the REST API. They are now visible only to staff. Also fixes the Pet Details block editor and adds 25 block settings. WP-CLI commands are now `wp shelterkit-pets`; the old names still work for now.

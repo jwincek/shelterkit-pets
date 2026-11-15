@@ -1314,3 +1314,10 @@
 	padding-top: var(--wp--preset--spacing--40, 1.5rem);
 	border-top: 1px solid var(--wp--preset--color--contrast-3, #eee);
 }
+
+/* A favorited pet's heart fills from its button's state; see
+   Petsync_Icons::get_heart_interactive() for why not from the <svg>. */
+.pet-slider__action--favorite.is-active .petsync-heart,
+.pet-slider__hero-action--favorite.is-active .petsync-heart {
+	fill: currentcolor;
+}
