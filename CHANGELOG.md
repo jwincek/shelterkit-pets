@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Sites that feature your pets can tell when one was adopted.** A partner
+  site, such as a supporter's blog, showed a pet that stopped being listed as
+  "found a home!", because that was the likeliest reason. Since 2.0.0 a pet
+  also stops being listed when it is returned, euthanized or transferred, and
+  the site rightly does not say which. The new `petsync/check-adoptions`
+  ability answers one question about any pet, listed or not: was it adopted?
+  Nothing else about an unlisted pet is shared, and private and trashed pets
+  are never reported. Another site asks with
+  `GET /wp-json/petsync/v1/petsync/check-adoptions/run?input={"ids":[…]}`, for
+  up to 100 pets at a time, and the answer also gives the address of the pet
+  listing. To share nothing, return an empty array from the new
+  `petsync_adopted_statuses` filter, which can also add statuses of your own
+  that mean adopted.
+
+### Fixed
+- **Bad input to a `petsync/v1` route is answered with a 400, not a 500.**
+  WordPress gives an ability's errors no HTTP status, so a caller's mistake
+  looked like a broken site.
+
 ## [2.0.0] - 2026-11-14
 
 ### Added

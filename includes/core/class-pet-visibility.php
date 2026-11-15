@@ -92,6 +92,34 @@ final class Pet_Visibility {
 	}
 
 	/**
+	 * Status slugs that mean a pet was adopted.
+	 *
+	 * The one outcome the site tells anyone about, for a pet it no longer
+	 * shows: the check-adoptions ability says whether a pet has one of these,
+	 * so a site that featured the pet can say it found a home.
+	 *
+	 * @since 2.1.0
+	 *
+	 * @return string[]
+	 */
+	public static function adopted_statuses(): array {
+		/**
+		 * Filters the statuses that count as adopted.
+		 *
+		 * Anyone may ask whether a pet has one of these, including a pet the
+		 * site no longer shows. Nothing else about an unlisted pet is shared.
+		 * Return an empty array to share nothing.
+		 *
+		 * @since 2.1.0
+		 *
+		 * @param string[] $statuses Status slugs. Default `adopted`.
+		 */
+		$statuses = apply_filters( 'petsync_adopted_statuses', array( 'adopted' ) );
+
+		return array_values( array_filter( array_map( 'strval', (array) $statuses ), static fn( string $slug ): bool => '' !== $slug ) );
+	}
+
+	/**
 	 * A status's slug, from its name as a provider sends it or from a slug.
 	 *
 	 * Petstablished sends "Adoption Pending"; the term is `pending`. A status

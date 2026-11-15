@@ -263,6 +263,74 @@ function batch_get( array $input ): array {
 }
 
 /**
+ * Most pets one check-adoptions call answers for.
+ */
+const MAX_ADOPTION_CHECKS = 100;
+
+/**
+ * Which of the given pets were adopted, and where the pets still waiting are.
+ *
+ * For a site that features the shelter's pets, such as a partner's blog. A pet
+ * that leaves the listings may have been adopted, returned, transferred or
+ * worse, and only adoption is news the shelter wants told. So this answers that
+ * one question, for listed and unlisted pets alike, and nothing more: an ID
+ * missing from `adopted` may be a pet in any other state, or no pet at all.
+ *
+ * Private and trashed pets are never reported. Staff put them there.
+ *
+ * @since 2.1.0
+ *
+ * @param array $input { ids: int[] }
+ * @return array{adopted: int[], listing_url: string}
+ */
+function check_adoptions( array $input ): array {
+	// intval rather than absint, as in batch_get(). The schema caps the list,
+	// but a caller in PHP skips the schema, so the cap is applied here too.
+	$ids = array_slice(
+		array_values(
+			array_unique(
+				array_filter(
+					array_map( 'intval', (array) ( $input['ids'] ?? array() ) ),
+					static fn( int $id ): bool => $id > 0
+				)
+			)
+		),
+		0,
+		MAX_ADOPTION_CHECKS
+	);
+
+	$statuses = \Petsync\Core\Pet_Visibility::adopted_statuses();
+	$adopted  = array();
+
+	if ( $ids && $statuses ) {
+		$adopted = get_posts(
+			[
+				'post_type'      => 'vcps_pet',
+				'post_status'    => [ 'publish', 'draft' ],
+				'post__in'       => $ids,
+				'posts_per_page' => count( $ids ),
+				'orderby'        => 'post__in',
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+				// At most 100 posts by primary key, so the term join stays small.
+				'tax_query'      => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+					[
+						'taxonomy' => \Petsync\Core\Pet_Visibility::taxonomy(),
+						'field'    => 'slug',
+						'terms'    => $statuses,
+					],
+				],
+			]
+		);
+	}
+
+	return [
+		'adopted'     => array_map( 'intval', $adopted ),
+		'listing_url' => (string) get_post_type_archive_link( 'vcps_pet' ),
+	];
+}
+
+/**
  * Get filter options from taxonomies.
  *
  * @return array

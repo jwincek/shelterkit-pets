@@ -61,6 +61,7 @@ final class StaffOnlyFieldsTest extends PetTestCase {
 			),
 			'petsync/get-comparison'     => array(),
 			'petsync/get-adoption-stats' => array(),
+			'petsync/check-adoptions'    => array( 'ids' => array( $this->pet ) ),
 			'petsync/set-pet-gallery'    => array(
 				'id'             => $this->pet,
 				'attachment_ids' => array(),

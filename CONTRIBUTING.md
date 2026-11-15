@@ -264,7 +264,7 @@ that can be reached to fix it up.
 - The template and template-part slugs, and the `shelterkit-pets` `wp_theme`
   name Site Editor customizations are filed under
 - Block-binding keys, which are stored in saved block markup
-- The `petsync/v1` REST namespace and the twelve `petsync/*` ability names, with
+- The `petsync/v1` REST namespace and the thirteen `petsync/*` ability names, with
   their input and output field names
 - The `petsync_*` and `shelterkit_profile_*` action and filter hooks
 - The `pet_favorites` and `pet_comparison` cookies, and the

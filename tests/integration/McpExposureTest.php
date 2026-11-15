@@ -98,6 +98,7 @@ final class McpExposureTest extends PetTestCase {
 		$this->assertSame(
 			array(
 				'petsync/batch-get-pets',
+				'petsync/check-adoptions',
 				'petsync/filter-pets',
 				'petsync/get-adoption-stats',
 				'petsync/get-filter-options',

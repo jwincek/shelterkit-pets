@@ -148,6 +148,10 @@ You can enable automatic syncing on a schedule from the Sync Settings screen. It
 
 No. A pet that is no longer in Petstablished's listing is unpublished (set to draft) on the next sync, and the Pets list says why. If it comes back, the next sync publishes it again. Nothing is deleted, and pets added by hand or from a spreadsheet are never touched by a sync.
 
+= Can another website show our adoptable pets? =
+
+Yes. Published pets are public through the WordPress REST API, so a supporter's site can feature them and link to each pet's page here. When one of those pets stops being listed, that site can ask whether it was adopted, and say it found a home only if it was. It learns nothing else about a pet you no longer show: not whether it was returned, transferred or euthanized. Developers: see the `petsync/check-adoptions` ability. The `petsync_adopted_statuses` filter turns it off, or adds statuses of your own that mean adopted.
+
 = Is a build step required? =
 
 No. The blocks use the WordPress Interactivity API and ship as ready-to-run source — no compilation needed.
