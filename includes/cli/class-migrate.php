@@ -44,6 +44,7 @@ class Migrate {
 		9  => 'Give the pet taxonomies the vcps_ prefix (keeps their URLs)',
 		10 => 'Backfill vcps_pet_attribute terms again: syncs had skipped them (touches all pets)',
 		11 => 'Keep syncing only cats and dogs where a sync already ran (settings only)',
+		12 => 'Record which pets the site has published, for check-adoptions (touches published pets)',
 	);
 
 	/**
@@ -77,10 +78,24 @@ class Migrate {
 			return;
 		}
 
+		if ( petsync_is_new_install() ) {
+			if ( ! $dry_run ) {
+				petsync_run_migrations();
+			}
+			\WP_CLI::success(
+				sprintf(
+					'A new install: nothing to convert. %s schema version %d.',
+					$dry_run ? 'Would record' : 'Recorded',
+					PETSYNC_DB_VERSION
+				)
+			);
+			return;
+		}
+
 		if ( 0 === $installed ) {
 			\WP_CLI::warning(
-				'No schema version recorded. That means either a fresh install, or an upgrade '
-				. 'from a build that predates the migration rail — in which case every migration below will run.'
+				'No schema version recorded, but this site has data from an older build that predates '
+				. 'the migration rail, so every migration below will run.'
 			);
 		}
 

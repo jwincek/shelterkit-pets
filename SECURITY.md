@@ -36,9 +36,10 @@ themselves:
   Draft, pending and private pets are not, apart from the next point.
 - **Whether a pet was adopted**, listed or not, through the `check-adoptions`
   ability, so that another site that featured the pet can say it found a
-  home. It answers only that, and never about a private or trashed pet. Other
-  outcomes, such as returned or euthanized, are not public. A shelter can turn
-  it off with the `petsync_adopted_statuses` filter.
+  home. It answers only that, and only about a pet the site has published at
+  some point: never about a draft that was never published, nor a private or
+  trashed pet. Other outcomes, such as returned or euthanized, are not public.
+  A shelter can turn it off with the `petsync_adopted_statuses` filter.
 - **Favorites and comparison** work for logged-out visitors, keyed to a cookie
   in their own browser. They hold only pet IDs. A request from another site
   cannot reach a logged-in user's saved lists, because WordPress treats a
@@ -53,7 +54,7 @@ What should **not** be public, and is worth reporting if you find a way to it:
   that pet;
 - the provider's record ID and raw API data stored with a synced pet;
 - anything else about draft, pending or private pets, including any status
-  other than adopted;
+  other than adopted, and whether a pet the site never published was adopted;
 - another user's saved favorites or comparison;
 - any write action (sync, import, export, settings, kennel-card setup) without
   the matching capability and nonce.

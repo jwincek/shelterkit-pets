@@ -121,6 +121,58 @@ final class UninstallTest extends PetTestCase {
 		$this->assertFalse( wp_next_scheduled( 'petsync_scheduled_sync' ) );
 	}
 
+	/**
+	 * The names before migration 9 are this plugin's only where that migration
+	 * never ran. Anywhere else a pet_* taxonomy is another plugin's, active or
+	 * not, and deleting this plugin must leave its terms.
+	 */
+	public function test_old_names_are_emptied_only_where_they_are_still_ours(): void {
+		$this->opt_in( true );
+
+		// An inactive plugin's: nothing registers it during the uninstall.
+		register_taxonomy( 'pet_breed', 'post' );
+		wp_set_object_terms( self::factory()->post->create(), 'their-beagle', 'pet_breed' );
+		unregister_taxonomy( 'pet_breed' );
+
+		update_option( 'petsync_db_version', PETSYNC_DB_VERSION );
+		$this->run_uninstall();
+
+		$this->assertSame( 1, $this->rows( 'pet_breed' ), "another plugin's terms stay" );
+	}
+
+	public function test_an_active_plugins_old_name_stays_even_before_migration_9(): void {
+		$this->opt_in( true );
+		register_taxonomy( 'pet_breed', 'post' );
+
+		try {
+			wp_set_object_terms( self::factory()->post->create(), 'their-beagle', 'pet_breed' );
+			update_option( 'petsync_db_version', 8 );
+			$this->run_uninstall();
+
+			$this->assertSame( 1, $this->rows( 'pet_breed' ) );
+		} finally {
+			unregister_taxonomy( 'pet_breed' );
+		}
+	}
+
+	public function test_an_install_deleted_before_migration_9_loses_its_old_terms(): void {
+		$this->opt_in( true );
+		register_taxonomy( 'pet_breed', 'vcps_pet' );
+		wp_insert_term( 'Old Beagle', 'pet_breed' );
+		unregister_taxonomy( 'pet_breed' );
+
+		update_option( 'petsync_db_version', 8 );
+		$this->run_uninstall();
+
+		$this->assertSame( 0, $this->rows( 'pet_breed' ) );
+	}
+
+	private function rows( string $taxonomy ): int {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the terms of a taxonomy nothing has registered.
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s", $taxonomy ) );
+	}
+
 	private function opt_in( bool $delete ): void {
 		update_option(
 			'petsync_settings',

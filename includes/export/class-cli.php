@@ -52,15 +52,16 @@ class CLI {
 	 * : Include drafts, pending and private pets. Each row keeps its
 	 * post_status, so a restore does not publish them.
 	 *
-	 * [--file=<path>]
-	 * : Write here instead of STDOUT.
+	 * The export goes to STDOUT. Redirect it to keep it in a file, somewhere
+	 * the web server does not serve: an export includes staff-only fields,
+	 * such as microchip numbers.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp shelterkit-pets export --file=pets.csv
+	 *     wp shelterkit-pets export > pets.csv
 	 *     wp shelterkit-pets export --format=json --mode=full --status=available
-	 *     wp shelterkit-pets export --provider=manual --file=hand-entered.csv
-	 *     wp shelterkit-pets export --include-unpublished --file=backup.csv
+	 *     wp shelterkit-pets export --provider=manual > hand-entered.csv
+	 *     wp shelterkit-pets export --include-unpublished > backup.csv
 	 *
 	 * @param array<int, string>    $args       Positional args.
 	 * @param array<string, string> $assoc_args Flags.
@@ -89,19 +90,8 @@ class CLI {
 			? Exporter::to_json( $ids, $mode )
 			: Exporter::to_csv( $ids, $mode );
 
-		$file = $assoc_args['file'] ?? '';
-
-		if ( $file ) {
-			if ( false === file_put_contents( $file, $output ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- CLI writing to a caller-specified path.
-				\WP_CLI::error( "Could not write to $file" );
-			}
-			\WP_CLI::success(
-				sprintf( 'Exported %d pet(s) to %s (%s, %s).', count( $ids ), $file, $format, $mode )
-			);
-			return;
-		}
-
-		// STDOUT, so it can be piped.
+		// STDOUT only, so it can be piped or redirected. The plugin writes no
+		// export to disk itself: where one is kept is the operator's choice.
 		\WP_CLI::line( $output );
 	}
 }

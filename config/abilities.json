@@ -828,7 +828,7 @@
     },
     "petsync/check-adoptions": {
       "label": "Check Adoptions",
-      "description": "Says which of the given pets were adopted, including pets the site no longer shows, so a site that featured one can say it found a home. Says nothing else about an unlisted pet. Also gives the address of the page listing the pets still waiting.",
+      "description": "Says which of the given pets were adopted, including pets the site no longer shows, so a site that featured one can say it found a home. Answers only for pets the site has published at some point, and says nothing else about an unlisted pet. Also gives the address of the page listing the pets still waiting.",
       "category": "pets",
       "permission": "public",
       "meta": {

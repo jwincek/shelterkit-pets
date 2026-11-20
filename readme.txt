@@ -150,7 +150,7 @@ No. A pet that is no longer in Petstablished's listing is unpublished (set to dr
 
 = Can another website show our adoptable pets? =
 
-Yes. Published pets are public through the WordPress REST API, so a supporter's site can feature them and link to each pet's page here. When one of those pets stops being listed, that site can ask whether it was adopted, and say it found a home only if it was. It learns nothing else about a pet you no longer show: not whether it was returned, transferred or euthanized. Developers: see the `petsync/check-adoptions` ability. The `petsync_adopted_statuses` filter turns it off, or adds statuses of your own that mean adopted.
+Yes. Published pets are public through the WordPress REST API, so a supporter's site can feature them and link to each pet's page here. When one of those pets stops being listed, that site can ask whether it was adopted, and say it found a home only if it was. It learns nothing else about a pet you no longer show: not whether it was returned, transferred or euthanized. A pet you never published is never reported at all. Developers: see the `petsync/check-adoptions` ability. The `petsync_adopted_statuses` filter turns it off, or adds statuses of your own that mean adopted.
 
 = Is a build step required? =
 

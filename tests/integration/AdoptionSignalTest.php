@@ -10,7 +10,8 @@
  * does not show are hidden from visitors.
  *
  * check-adoptions answers the one question a partner needs, whether the pet
- * was adopted, and nothing else.
+ * was adopted, and nothing else. It answers only for a pet the site has shown
+ * at some point, since a partner can only have featured one of those.
  *
  * @package ShelterKit_Pets
  */
@@ -36,22 +37,57 @@ final class AdoptionSignalTest extends PetTestCase {
 	}
 
 	/**
-	 * A synced pet with a status, published or not.
+	 * A synced pet with a status. Listed, then by default unlisted, as the sync
+	 * leaves a pet whose status the site stops showing.
 	 *
 	 * @param string $status      Status name.
-	 * @param string $post_status Post status.
+	 * @param string $post_status Post status it ends with.
 	 */
 	private function pet( string $status, string $post_status = 'draft' ): int {
 		$id = $this->make_synced_pet(
 			array(
 				'id'     => $this->next_record++,
 				'status' => $status,
-			),
-			array( 'post_status' => $post_status )
+			)
 		);
 		wp_set_object_terms( $id, $status, 'vcps_pet_status' );
 
+		if ( 'publish' !== $post_status ) {
+			wp_update_post(
+				array(
+					'ID'          => $id,
+					'post_status' => $post_status,
+				)
+			);
+		}
+
 		return $id;
+	}
+
+	/**
+	 * Run one pet through the sync, as a sync run does.
+	 *
+	 * @param array<string, mixed> $record One pet as the Petstablished API sends it.
+	 * @return int The pet's post ID.
+	 */
+	private function sync( array $record ): int {
+		( new \ReflectionMethod( \Petsync_Sync::class, 'process_single_pet' ) )->invoke(
+			new \Petsync_Sync(),
+			$record + array( 'description' => '<p>Hello.</p>' )
+		);
+
+		$ids = get_posts(
+			array(
+				'post_type'   => 'vcps_pet',
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'meta_key'    => '_pet_ps_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- a test fixture lookup.
+				'meta_value'  => (string) $record['id'], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- a test fixture lookup.
+			)
+		);
+		$this->assertCount( 1, $ids );
+
+		return (int) $ids[0];
 	}
 
 	/**
@@ -77,6 +113,91 @@ final class AdoptionSignalTest extends PetTestCase {
 		$result = $this->ask( array( $euthanized, $adopted, $returned, $left_feed, $listed, $on_hold, $page, $listed_adopted ) );
 
 		$this->assertSame( array( $adopted, $listed_adopted ), $result['adopted'], 'adopted pets only, in the order asked' );
+	}
+
+	/**
+	 * Only a pet the site has shown is told. One that never was, because it
+	 * arrived from the provider already adopted or staff never published it, is
+	 * the shelter's own record: no partner featured it, and an anonymous caller
+	 * trying IDs must not learn that it exists.
+	 *
+	 * Found by the WordPress.org plugin review.
+	 */
+	public function test_only_a_pet_the_site_has_shown_is_told(): void {
+		$this->sync(
+			array(
+				'id'     => 801,
+				'name'   => 'Listed first',
+				'status' => 'Available',
+			)
+		);
+		$listed_first    = $this->sync(
+			array(
+				'id'     => 801,
+				'name'   => 'Listed first',
+				'status' => 'Adopted',
+			)
+		);
+		$arrived_adopted = $this->sync(
+			array(
+				'id'     => 802,
+				'name'   => 'Never listed',
+				'status' => 'Adopted',
+			)
+		);
+		$never_published = $this->make_manual_pet( array( 'post_status' => 'draft' ) );
+		wp_set_object_terms( $never_published, 'Adopted', 'vcps_pet_status' );
+
+		$this->assertSame( 'draft', get_post_status( $listed_first ), 'the sync unlisted it' );
+		$this->assertSame( 'draft', get_post_status( $arrived_adopted ), 'and never listed this one' );
+
+		$this->assertSame(
+			array( $listed_first ),
+			$this->ask( array( $arrived_adopted, $never_published, $listed_first ) )['adopted']
+		);
+	}
+
+	/**
+	 * The record is made by publishing, whichever way a pet is published, and
+	 * outlives going back to draft.
+	 */
+	public function test_the_first_publication_is_remembered(): void {
+		$meta = \Petsync\Core\Pet_Visibility::LISTED_META;
+
+		$pet = $this->make_manual_pet( array( 'post_status' => 'draft' ) );
+		$this->assertSame( '', get_post_meta( $pet, $meta, true ), 'a draft has not been shown' );
+
+		wp_update_post(
+			array(
+				'ID'          => $pet,
+				'post_status' => 'publish',
+			)
+		);
+		$first = get_post_meta( $pet, $meta, true );
+		$this->assertNotSame( '', $first );
+
+		foreach ( array( 'draft', 'publish' ) as $post_status ) {
+			wp_update_post(
+				array(
+					'ID'          => $pet,
+					'post_status' => $post_status,
+				)
+			);
+		}
+		$this->assertSame( array( $first ), get_post_meta( $pet, $meta, false ), 'kept, and recorded once' );
+
+		$scheduled = $this->make_manual_pet(
+			array(
+				'post_status' => 'future',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ),
+			)
+		);
+		$this->assertSame( '', get_post_meta( $scheduled, $meta, true ), 'scheduled is not shown yet' );
+		wp_publish_post( $scheduled );
+		$this->assertNotSame( '', get_post_meta( $scheduled, $meta, true ) );
+
+		$post = self::factory()->post->create();
+		$this->assertSame( '', get_post_meta( $post, $meta, true ), 'pets only' );
 	}
 
 	public function test_nothing_else_is_said(): void {
