@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-11-20
+
 ### Fixed
 - **Installing the plugin could take over another plugin's taxonomies.** A
   new install started at schema version 0 and ran every migration, including
@@ -632,7 +634,8 @@ record is affected.
 - Built on the WordPress Abilities API and Block Bindings; server-rendered blocks with no build step.
 - Uninstall handler with an opt-in "Delete all data when this plugin is deleted" setting (default off, so delete + reinstall loses nothing). Ephemeral state (cron event, transients) is always cleaned up; pets, `pet_*` taxonomy terms, Site Editor template customizations, options, and per-user favorites/comparison meta are removed only when opted in (multisite-aware).
 
-[Unreleased]: https://github.com/jwincek/shelterkit-pets/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/jwincek/shelterkit-pets/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/jwincek/shelterkit-pets/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/jwincek/shelterkit-pets/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/jwincek/shelterkit-pets/compare/v1.6.0...v2.0.0
 [1.6.0]: https://github.com/jwincek/shelterkit-pets/compare/v1.5.0...v1.6.0

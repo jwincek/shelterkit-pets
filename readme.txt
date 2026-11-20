@@ -4,7 +4,7 @@ Tags: pets, adoption, animal shelter, rescue, animals
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 2.1.0
+Stable tag: 2.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,6 +183,11 @@ Pet photos are kept either way. They are ordinary Media Library items and may be
 
 == Changelog ==
 
+= 2.2.0 =
+* Fixed: on a site where another plugin uses a `pet_*` taxonomy, such as `pet_breed`, installing this plugin could move that plugin's terms into its own. A new install now runs no upgrade steps, and deleting the plugin leaves other plugins' taxonomies alone.
+* Changed: when another site asks whether a pet was adopted, it gets an answer only for pets your site has published at some point.
+* Changed: `wp shelterkit-pets export` prints to the terminal only, and the `--file` option is gone. Redirect the output instead: `wp shelterkit-pets export > pets.csv`.
+
 = 2.1.0 =
 * New: another site that features your pets, such as a supporter's blog, can ask whether a pet that is no longer listed was adopted, so it says the pet found a home only when it did. Nothing else about an unlisted pet is shared, and the `petsync_adopted_statuses` filter turns it off.
 * Fixed: a bad request to the plugin's REST routes is answered as the caller's error (400), not as a server failure (500).
@@ -273,6 +278,9 @@ Pet photos are kept either way. They are ordinary Media Library items and may be
 * Built on the WordPress Abilities API and Block Bindings.
 
 == Upgrade Notice ==
+
+= 2.2.0 =
+Fixes a new install taking over another plugin's pet_* taxonomies. Other sites now hear whether a pet was adopted only for pets you have published. WP-CLI: export no longer takes --file; redirect its output instead.
 
 = 2.1.0 =
 Other sites that show your pets can now ask whether a pet that is no longer listed was adopted, and learn nothing else about it. To share nothing, return an empty array from the petsync_adopted_statuses filter.
