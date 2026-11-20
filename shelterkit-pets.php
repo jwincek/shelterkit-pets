@@ -419,12 +419,11 @@ function petsync_is_new_install(): bool {
 	// uninstall.php.
 	$pets = get_posts(
 		array(
-			'post_type'        => 'vcps_pet',
-			'post_status'      => array( 'any', 'trash', 'auto-draft' ),
-			'numberposts'      => 1,
-			'fields'           => 'ids',
-			'no_found_rows'    => true,
-			'suppress_filters' => true,
+			'post_type'     => 'vcps_pet',
+			'post_status'   => array( 'any', 'trash', 'auto-draft' ),
+			'numberposts'   => 1,
+			'fields'        => 'ids',
+			'no_found_rows' => true,
 		)
 	);
 	if ( $pets ) {
