@@ -208,13 +208,187 @@ final class MigrationsTest extends PetTestCase {
 		);
 	}
 
+	/**
+	 * Another plugin's pet_status is that plugin's. Filling it with "Available"
+	 * would hand our pets to its taxonomy and put a term in its list.
+	 */
+	public function test_migration_3_leaves_another_plugins_pet_status_alone(): void {
+		$id = $this->make_legacy_pet();
+		register_taxonomy( 'pet_status', 'post' );
+
+		petsync_migrate_3_default_status();
+
+		$this->assertSame( array(), wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'ids' ) ) );
+		$this->assertNull( term_exists( 'available', 'pet_status' ) );
+		$this->assertSame( array( 'post' ), get_taxonomy( 'pet_status' )->object_type, 'and its registration stands' );
+	}
+
 	public function test_migrations_no_op_on_a_fresh_install(): void {
-		// No pets at all — every migration must run without error, because a
-		// fresh install starts at version 0 and runs the whole list.
+		// No pets at all. A new install runs none of these, but an upgrade from
+		// before the rail with nothing to convert runs all of them.
 		foreach ( petsync_get_migrations() as $version => $callback ) {
 			$callback();
 			$this->assertTrue( true, "migration {$version} completed on an empty install" );
 		}
+	}
+
+	// ── A new install ────────────────────────────────────────────────────────
+	//
+	// The rail converts data from older builds, filed under names this plugin no
+	// longer uses. On a new site those names may be another plugin's.
+
+	/**
+	 * A taxonomy with one of the old names, as another pet plugin leaves it. Not
+	 * registered: that plugin may be inactive, and then nothing shows whose the
+	 * terms are.
+	 *
+	 * @return int Its one term's ID.
+	 */
+	private function foreign_breed(): int {
+		register_taxonomy( 'pet_breed', 'post' );
+		$term = wp_insert_term( 'Their Beagle', 'pet_breed' );
+		wp_set_object_terms( self::factory()->post->create(), (int) $term['term_id'], 'pet_breed' );
+		unregister_taxonomy( 'pet_breed' );
+
+		return (int) $term['term_id'];
+	}
+
+	private function taxonomy_of( int $term_id ): string {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads the raw row a migration would rewrite.
+		return (string) $wpdb->get_var( $wpdb->prepare( "SELECT taxonomy FROM {$wpdb->term_taxonomy} WHERE term_id = %d", $term_id ) );
+	}
+
+	/**
+	 * Found by the WordPress.org plugin review, which flagged migration 3's
+	 * pet_status. Worse than that flag: a new install started at version 0 and
+	 * ran every migration, so migration 9 renamed every pet_* taxonomy on the
+	 * site and rewrote the block markup that named one.
+	 */
+	public function test_a_new_install_runs_no_migration(): void {
+		delete_option( 'petsync_db_version' );
+		$term   = $this->foreign_breed();
+		$markup = '<!-- wp:post-terms {"term":"pet_breed"} /-->';
+		$part   = self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_template_part',
+				'post_content' => $markup,
+			)
+		);
+
+		$result = petsync_run_migrations();
+
+		$this->assertTrue( $result['new'] );
+		$this->assertSame( array(), $result['ran'] );
+		$this->assertSame( PETSYNC_DB_VERSION, (int) get_option( 'petsync_db_version' ) );
+		$this->assertSame( 'pet_breed', $this->taxonomy_of( $term ), "another plugin's terms keep their taxonomy" );
+		$this->assertSame( $markup, get_post( $part )->post_content );
+	}
+
+	public function test_a_dry_run_on_a_new_install_writes_nothing(): void {
+		delete_option( 'petsync_db_version' );
+
+		$this->assertTrue( petsync_run_migrations( true )['new'] );
+		$this->assertFalse( get_option( 'petsync_db_version' ) );
+	}
+
+	/**
+	 * Anything an older build stores marks an upgrade, which runs the rail.
+	 *
+	 * @dataProvider older_build_leftovers
+	 *
+	 * @param string $leftover What an older build left.
+	 */
+	public function test_what_an_older_build_left_marks_an_upgrade( string $leftover ): void {
+		delete_option( 'petsync_db_version' );
+		$this->assertTrue( petsync_is_new_install(), 'nothing is stored yet' );
+
+		match ( $leftover ) {
+			'a pet'                   => $this->make_manual_pet(),
+			'a trashed pet'           => $this->make_manual_pet( array( 'post_status' => 'trash' ) ),
+			'settings'                => update_option( 'petsync_settings', array( 'auto_sync' => false ) ),
+			'settings from before 1.0' => update_option( 'petstablished_sync_settings', array( 'public_key' => 'x' ) ),
+			'a sync'                  => update_option( 'petsync_last_sync', time() ),
+			'an old template'         => $this->customize_template_under( 'petstablished-sync' ),
+		};
+
+		$this->assertFalse( petsync_is_new_install() );
+		$this->assertFalse( petsync_run_migrations()['new'] );
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function older_build_leftovers(): array {
+		$leftovers = array( 'a pet', 'a trashed pet', 'settings', 'settings from before 1.0', 'a sync', 'an old template' );
+
+		return array_combine( $leftovers, array_map( static fn( string $leftover ): array => array( $leftover ), $leftovers ) );
+	}
+
+	/**
+	 * Activation records the version too. A site set up from WP-CLI has pets by
+	 * the time its first page load runs the rail, so the rail alone would take
+	 * it for an upgrade.
+	 */
+	public function test_activation_records_the_version_on_a_new_install_only(): void {
+		$activate = 'activate_' . plugin_basename( PETSYNC_FILE );
+
+		delete_option( 'petsync_db_version' );
+		do_action( $activate );
+		$this->assertSame( PETSYNC_DB_VERSION, (int) get_option( 'petsync_db_version' ) );
+
+		delete_option( 'petsync_db_version' );
+		$this->make_manual_pet();
+		do_action( $activate );
+		$this->assertFalse( get_option( 'petsync_db_version' ), 'a site with pets is upgrading' );
+
+		wp_clear_scheduled_hook( 'petsync_scheduled_sync' );
+	}
+
+	// ── Migration 12: which pets the site has shown ──────────────────────────
+
+	public function test_migration_12_records_the_pets_the_site_has_shown(): void {
+		$meta      = \Petsync\Core\Pet_Visibility::LISTED_META;
+		$published = $this->make_manual_pet();
+		$was       = $this->make_manual_pet();
+		wp_update_post(
+			array(
+				'ID'          => $was,
+				'post_status' => 'draft',
+			)
+		);
+		$never     = $this->make_manual_pet( array( 'post_status' => 'draft' ) );
+		$scheduled = $this->make_manual_pet(
+			array(
+				'post_status' => 'future',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ),
+			)
+		);
+		$private   = $this->make_manual_pet( array( 'post_status' => 'private' ) );
+
+		// As pets from before 2.2.0 are: with no record.
+		foreach ( array( $published, $was, $never, $scheduled, $private ) as $id ) {
+			delete_post_meta( $id, $meta );
+		}
+
+		$this->assertTrue( petsync_migrate_12_first_listed() );
+
+		$this->assertSame( strtotime( get_post( $published )->post_date_gmt . ' UTC' ), (int) get_post_meta( $published, $meta, true ) );
+		$this->assertNotSame( '', get_post_meta( $was, $meta, true ), 'published, then drafted: WordPress kept its date' );
+		$this->assertSame( '', get_post_meta( $never, $meta, true ), 'a draft never published has no date' );
+		$this->assertSame( '', get_post_meta( $scheduled, $meta, true ), 'scheduled has a date but was never shown' );
+		$this->assertSame( '', get_post_meta( $private, $meta, true ), 'private from the start' );
+	}
+
+	public function test_migration_12_keeps_a_record_and_is_idempotent(): void {
+		$meta = \Petsync\Core\Pet_Visibility::LISTED_META;
+		$id   = $this->make_manual_pet();
+		update_post_meta( $id, $meta, '12345' );
+
+		petsync_migrate_12_first_listed();
+		petsync_migrate_12_first_listed();
+
+		$this->assertSame( array( '12345' ), get_post_meta( $id, $meta, false ) );
 	}
 
 	// ── Migration 4: template namespace ──────────────────────────────────────

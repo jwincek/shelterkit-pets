@@ -276,9 +276,15 @@ const MAX_ADOPTION_CHECKS = 100;
  * one question, for listed and unlisted pets alike, and nothing more: an ID
  * missing from `adopted` may be a pet in any other state, or no pet at all.
  *
- * Private and trashed pets are never reported. Staff put them there.
+ * Only a pet the site has shown at some point is reported: one published now,
+ * or a draft that was published before. A draft that never was, entered by
+ * hand or synced already hidden, is the shelter's private record. A partner
+ * could not have featured it, and an anonymous caller trying every ID must not
+ * learn of it. Private and trashed pets are never reported. Staff put them
+ * there.
  *
  * @since 2.1.0
+ * @since 2.2.0 Only pets the site has shown.
  *
  * @param array $input { ids: int[] }
  * @return array{adopted: int[], listing_url: string}
@@ -303,17 +309,17 @@ function check_adoptions( array $input ): array {
 	$adopted  = array();
 
 	if ( $ids && $statuses ) {
-		$adopted = get_posts(
+		$pets = get_posts(
 			[
-				'post_type'      => 'vcps_pet',
-				'post_status'    => [ 'publish', 'draft' ],
-				'post__in'       => $ids,
-				'posts_per_page' => count( $ids ),
-				'orderby'        => 'post__in',
-				'fields'         => 'ids',
-				'no_found_rows'  => true,
+				'post_type'              => 'vcps_pet',
+				'post_status'            => [ 'publish', 'draft' ],
+				'post__in'               => $ids,
+				'posts_per_page'         => count( $ids ),
+				'orderby'                => 'post__in',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
 				// At most 100 posts by primary key, so the term join stays small.
-				'tax_query'      => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+				'tax_query'              => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 					[
 						'taxonomy' => \Petsync\Core\Pet_Visibility::taxonomy(),
 						'field'    => 'slug',
@@ -322,6 +328,13 @@ function check_adoptions( array $input ): array {
 				],
 			]
 		);
+
+		// Meta for every pet came with the query, so this costs no more of it.
+		foreach ( $pets as $pet ) {
+			if ( \Petsync\Core\Pet_Visibility::was_listed( $pet ) ) {
+				$adopted[] = $pet->ID;
+			}
+		}
 	}
 
 	return [

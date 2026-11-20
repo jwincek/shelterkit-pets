@@ -14,7 +14,8 @@
  * loses nothing):
  *  - all `vcps_pet` posts, however they were added (and their post meta /
  *    term relationships)
- *  - all terms in the plugin's `pet_*` taxonomies
+ *  - all terms in the plugin's `vcps_pet_*` taxonomies, and in the `pet_*`
+ *    names they had before migration 9 where that never ran
  *  - Site Editor customizations of plugin templates and template parts
  *    (wp_template / wp_template_part posts filed under this plugin's
  *    wp_theme term), plus that term itself
@@ -112,6 +113,12 @@ function petsync_uninstall_site(): bool {
 	// before migration 9 ever ran still has its terms under the old ones. The
 	// list repeats petsync_taxonomy_renames(), which is unreachable here;
 	// validator check 16 keeps the two in step.
+	//
+	// Anywhere else an old name is not ours: on a site that ran migration 9,
+	// or started after it, a pet_* taxonomy belongs to whichever plugin
+	// registers it, active or not, and its terms stay. The same goes for an
+	// old name that an active plugin registers now.
+	$migrated   = (int) get_option( 'petsync_db_version', 0 ) >= 9;
 	$taxonomies = array(
 		'vcps_pet_status',
 		'vcps_pet_animal',
@@ -134,6 +141,10 @@ function petsync_uninstall_site(): bool {
 	);
 
 	foreach ( $taxonomies as $taxonomy ) {
+		if ( ! str_starts_with( $taxonomy, 'vcps_' ) && ( $migrated || taxonomy_exists( $taxonomy ) ) ) {
+			continue;
+		}
+
 		register_taxonomy( $taxonomy, 'vcps_pet' );
 
 		$term_ids = get_terms(

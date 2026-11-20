@@ -174,6 +174,35 @@ final class TaxonomyRenameMigrationTest extends PetTestCase {
 		$this->assertStringContainsString( 'Our "pet_breed" pages moved.', $content, 'prose is not block attributes' );
 	}
 
+	/**
+	 * Where another plugin registers one of the old names, the name is that
+	 * plugin's: its terms and the block markup naming it stay as they are. The
+	 * other names are still renamed.
+	 */
+	public function test_an_old_name_another_plugin_registers_is_left_alone(): void {
+		$dog = $this->make_old_pet( array( 'pet_animal' => 'dog' ) );
+
+		unregister_taxonomy( 'pet_breed' );
+		register_taxonomy( 'pet_breed', 'post' );
+		wp_set_object_terms( self::factory()->post->create(), 'their-beagle', 'pet_breed' );
+		$part = self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_template_part',
+				'post_content' => '<!-- wp:post-terms {"term":"pet_breed"} /--><!-- wp:post-terms {"term":"pet_animal"} /-->',
+			)
+		);
+
+		$this->assertTrue( petsync_migrate_9_taxonomy_prefix() );
+
+		$this->assertSame( 1, $this->rows( 'pet_breed' ), "the other plugin's term keeps its taxonomy" );
+		$this->assertNotNull( term_exists( 'their-beagle', 'pet_breed' ) );
+		$this->assertSame( array( 'dog' ), $this->slugs( $dog, 'vcps_pet_animal' ), 'the names that are ours still move' );
+		$this->assertSame(
+			'<!-- wp:post-terms {"term":"pet_breed"} /--><!-- wp:post-terms {"term":"vcps_pet_animal"} /-->',
+			get_post( $part )->post_content
+		);
+	}
+
 	public function test_running_it_again_changes_nothing(): void {
 		global $wpdb;
 

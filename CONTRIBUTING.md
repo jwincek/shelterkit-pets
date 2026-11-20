@@ -163,10 +163,14 @@ that hands pet data to the public must go through an ability.
 
 To change the shape of stored data, bump `PETSYNC_DB_VERSION` and add an
 entry to `petsync_get_migrations()`. A migration must be idempotent, because
-a fresh install runs the whole list. It may return `false` to stop the rail, so
-the step runs again rather than being silently marked done. Never reuse a
-version number: an install already at that version will not run it again.
-`wp shelterkit-pets migrate --dry-run` shows what would run.
+an upgrade from a build older than the rail runs the whole list. A new install
+runs none of it: `petsync_is_new_install()` records the current version
+instead, because old migrations work on names, such as the `pet_*` taxonomies,
+that another plugin may own on a new site. So a migration must never be the
+only place something a new install needs gets created. It may return `false` to
+stop the rail, so the step runs again rather than being silently marked done.
+Never reuse a version number: an install already at that version will not run
+it again. `wp shelterkit-pets migrate --dry-run` shows what would run.
 
 ### A taxonomy page is the archive with a filter
 

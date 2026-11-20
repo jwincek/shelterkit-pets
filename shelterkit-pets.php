@@ -72,6 +72,13 @@ register_activation_hook(
 		\Petsync\Core\CPT_Registry::register_post_types();
 		\Petsync\Core\CPT_Registry::register_taxonomies();
 
+		// A new install has nothing to migrate. Say so now, before anything can
+		// create a pet: a site filled from WP-CLI first runs the rail on its
+		// first page load, when its pets would make it look like an upgrade.
+		if ( petsync_is_new_install() ) {
+			update_option( 'petsync_db_version', PETSYNC_DB_VERSION, true );
+		}
+
 		// Flush rewrite rules so /pets/ and taxonomy archives work immediately.
 		flush_rewrite_rules();
 
@@ -346,15 +353,16 @@ add_action( 'plugins_loaded', 'petsync_init' );
  * plugin's DATA version and is deliberately independent of the release version
  * in the plugin header — most releases change no stored data at all.
  */
-define( 'PETSYNC_DB_VERSION', 11 );
+define( 'PETSYNC_DB_VERSION', 12 );
 
 /**
  * The ordered migration list.
  *
  * Keyed by the schema version each migration brings the install UP TO. They run
- * in key order, and only those above the installed version run. Every migration
- * must be idempotent anyway: a fresh install starts at 0 and runs the whole list,
- * so each one has to no-op cleanly when there is nothing to convert.
+ * in key order, and only those above the installed version run. A new install
+ * runs none of them (see petsync_is_new_install()). Every migration must still
+ * be idempotent and no-op cleanly when there is nothing to convert: an upgrade
+ * from a build older than the rail starts at 0 and runs the whole list.
  *
  * @return array<int, callable> Migration callables keyed by target version.
  */
@@ -381,7 +389,63 @@ function petsync_get_migrations(): array {
 		// changed since has its previous terms. The backfill is the same.
 		10 => 'petsync_migrate_7_backfill_attribute_terms',
 		11 => 'petsync_migrate_11_sync_species',
+		12 => 'petsync_migrate_12_first_listed',
 	);
+}
+
+/**
+ * Whether this site is a new install, with nothing for the migration rail to
+ * convert.
+ *
+ * The rail exists for sites upgrading from older builds, and its early
+ * migrations work on names this plugin no longer uses, among them the pet_*
+ * taxonomies. Those names may belong to another plugin on a new site, so a new
+ * site must not run them. It records the current schema version instead.
+ *
+ * A site counts as new only when no version is recorded and nothing an older
+ * build stores exists: no pet in any status, none of its settings or sync
+ * records, and no Site Editor customization filed under an old namespace.
+ *
+ * Read on the request that would run the rail, and at activation. The latter
+ * covers a site set up and filled from WP-CLI, which skips the rail until the
+ * first page load, by which time it has pets.
+ */
+function petsync_is_new_install(): bool {
+	if ( false !== get_option( 'petsync_db_version' ) ) {
+		return false;
+	}
+
+	// 'any' leaves out trashed pets and auto-drafts, so both are named, as in
+	// uninstall.php.
+	$pets = get_posts(
+		array(
+			'post_type'        => 'vcps_pet',
+			'post_status'      => array( 'any', 'trash', 'auto-draft' ),
+			'numberposts'      => 1,
+			'fields'           => 'ids',
+			'no_found_rows'    => true,
+			'suppress_filters' => true,
+		)
+	);
+	if ( $pets ) {
+		return false;
+	}
+
+	foreach ( array( 'petsync_settings', 'petsync_last_sync', 'petstablished_sync_settings' ) as $option ) {
+		if ( false !== get_option( $option ) ) {
+			return false;
+		}
+	}
+
+	if ( taxonomy_exists( 'wp_theme' ) ) {
+		foreach ( Petsync_Templates::LEGACY_NAMESPACES as $legacy ) {
+			if ( get_term_by( 'name', $legacy, 'wp_theme' ) instanceof WP_Term ) {
+				return false;
+			}
+		}
+	}
+
+	return true;
 }
 
 /**
@@ -401,7 +465,9 @@ function petsync_get_migrations(): array {
  *                                       all succeed. Deliberately a parameter rather than
  *                                       a filter: a filter would let any plugin inject
  *                                       migrations into this site's schema.
- * @return array{installed:int, target:int, completed:int, ran:int[], failed:?int}
+ * @return array{installed:int, target:int, completed:int, ran:int[], failed:?int, new:bool}
+ *         `new` is true when this was a new install: nothing ran, and the
+ *         current version was recorded.
  */
 function petsync_run_migrations( bool $dry_run = false, ?callable $reporter = null, ?array $migrations = null ): array {
 	$installed = (int) get_option( 'petsync_db_version', 0 );
@@ -411,9 +477,19 @@ function petsync_run_migrations( bool $dry_run = false, ?callable $reporter = nu
 		'completed' => $installed,
 		'ran'       => array(),
 		'failed'    => null,
+		'new'       => false,
 	);
 
 	if ( $installed >= PETSYNC_DB_VERSION ) {
+		return $result;
+	}
+
+	if ( petsync_is_new_install() ) {
+		if ( ! $dry_run ) {
+			update_option( 'petsync_db_version', PETSYNC_DB_VERSION, true );
+		}
+		$result['completed'] = PETSYNC_DB_VERSION;
+		$result['new']       = true;
 		return $result;
 	}
 
@@ -625,7 +701,11 @@ function petsync_migrate_3_default_status(): void {
 	// that name any more, so register it for this run only, flat, the way
 	// uninstall.php does. Using the new name here instead would give every pet
 	// "available" before migration 9 brought its real status across.
-	$legacy     = 'pet_status';
+	$legacy = 'pet_status';
+	if ( petsync_legacy_taxonomy_is_taken( $legacy ) ) {
+		return;
+	}
+
 	$registered = taxonomy_exists( $legacy );
 	if ( ! $registered ) {
 		register_taxonomy( $legacy, 'vcps_pet' );
@@ -926,6 +1006,46 @@ function petsync_migrate_11_sync_species(): bool {
 }
 
 /**
+ * Migration 12 — record which pets the site has shown.
+ *
+ * check-adoptions tells anyone whether a pet was adopted, and should say so
+ * only of a pet the site once published. Pet_Visibility::remember_listed() has
+ * recorded that since this version. For older pets the evidence is the GMT
+ * date: WordPress leaves it unset on a draft that was never published, and
+ * keeps it when a published pet goes back to draft. A published pet is shown
+ * now, and has one too.
+ *
+ * Scheduled pets have a GMT date without ever having been shown, so they are
+ * left out, as are private and trashed pets, which a pet can be from the
+ * start. A draft someone gave a date by hand counts as shown, the one case
+ * this over-reports.
+ *
+ * @return bool True when done.
+ */
+function petsync_migrate_12_first_listed(): bool {
+	global $wpdb;
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
+	$pets = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT p.ID, p.post_date_gmt FROM {$wpdb->posts} p
+			 LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
+			 WHERE p.post_type = 'vcps_pet'
+			   AND p.post_status IN ( 'publish', 'draft', 'pending' )
+			   AND p.post_date_gmt <> '0000-00-00 00:00:00'
+			   AND m.meta_id IS NULL",
+			\Petsync\Core\Pet_Visibility::LISTED_META
+		)
+	);
+
+	foreach ( $pets as $pet ) {
+		add_post_meta( (int) $pet->ID, \Petsync\Core\Pet_Visibility::LISTED_META, (int) strtotime( $pet->post_date_gmt . ' UTC' ), true );
+	}
+
+	return true;
+}
+
+/**
  * Migration 8 — seed _pet_last_seen for pets that predate the field.
  *
  * Without this the staleness notice fires on the first admin page load after an
@@ -997,6 +1117,19 @@ function petsync_taxonomy_renames(): array {
 }
 
 /**
+ * Whether another plugin has registered one of the names before migration 9.
+ *
+ * Nothing in this plugin registers those names any more, except migration 3
+ * for its own run. So a name registered for some other post type belongs to
+ * someone else on this site, and its terms are not ours to rename or fill.
+ *
+ * @param string $name A key of petsync_taxonomy_renames().
+ */
+function petsync_legacy_taxonomy_is_taken( string $name ): bool {
+	return taxonomy_exists( $name ) && ! is_object_in_taxonomy( 'vcps_pet', $name );
+}
+
+/**
  * Migration 9 — give the taxonomies the post type's vcps_ prefix.
  *
  * pet_* was a three-letter dictionary-word prefix that another pet plugin could
@@ -1013,15 +1146,23 @@ function petsync_taxonomy_renames(): array {
  * Public names do not change: each taxonomy keeps its old name as its rewrite
  * slug and as its REST base (see the note in config/taxonomies.json).
  *
+ * An old name that another plugin registers is skipped, terms, menus and block
+ * markup alike: on that site the name is the other plugin's.
+ *
  * @return bool False if the rename failed, so the rail retries it.
  */
 function petsync_migrate_9_taxonomy_prefix(): bool {
 	global $wpdb;
 
-	$config = \Petsync\Core\Config::get_item( 'taxonomies', 'taxonomies', array() );
-	$merged = array();
+	$config  = \Petsync\Core\Config::get_item( 'taxonomies', 'taxonomies', array() );
+	$merged  = array();
+	$renames = array_filter(
+		petsync_taxonomy_renames(),
+		static fn( string $old ): bool => ! petsync_legacy_taxonomy_is_taken( $old ),
+		ARRAY_FILTER_USE_KEY
+	);
 
-	foreach ( petsync_taxonomy_renames() as $old => $new ) {
+	foreach ( $renames as $old => $new ) {
 		// Terms the new taxonomy already holds under a slug the old one also has.
 		// Keep the old term, which carries the pets; move anything attached to the
 		// new one across first. INSERT IGNORE leaves one row where an object was
@@ -1095,14 +1236,14 @@ function petsync_migrate_9_taxonomy_prefix(): bool {
 		}
 	}
 
-	petsync_migrate_9_block_markup();
+	petsync_migrate_9_block_markup( array_keys( $renames ) );
 
 	// The SQL above went round the object cache, which may still hold term
 	// objects naming the old taxonomy, and relationship caches for the new names
 	// filled earlier on this request, before the rename, as empty. A site with a
 	// persistent cache would otherwise show pets with no status until those
 	// expired.
-	foreach ( petsync_taxonomy_renames() as $new ) {
+	foreach ( $renames as $new ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
 		$term_ids = $wpdb->get_col( $wpdb->prepare( "SELECT term_id FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s", $new ) );
 		clean_term_cache( array_map( 'intval', $term_ids ), $new );
@@ -1126,11 +1267,17 @@ function petsync_migrate_9_taxonomy_prefix(): bool {
  * Core blocks name a taxonomy in their attributes: core/post-terms as "term",
  * core/query as a "taxQuery" key. Only the attribute JSON inside block
  * delimiters is touched, so prose that happens to mention a name is left alone.
+ *
+ * @param string[] $old_names The old names being renamed on this site.
  */
-function petsync_migrate_9_block_markup(): void {
+function petsync_migrate_9_block_markup( array $old_names ): void {
 	global $wpdb;
 
-	$names = implode( '|', array_map( 'preg_quote', array_keys( petsync_taxonomy_renames() ) ) );
+	if ( ! $old_names ) {
+		return;
+	}
+
+	$names = implode( '|', array_map( 'preg_quote', $old_names ) );
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
 	$posts = $wpdb->get_results(

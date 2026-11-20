@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Installing the plugin could take over another plugin's taxonomies.** A
+  new install started at schema version 0 and ran every migration, including
+  those written for sites upgrading from older builds. Migration 9 renames the
+  `pet_*` taxonomies the plugin used before 2.0.0, and on a site where another
+  plugin uses one of those names it would have moved that plugin's terms, menu
+  items and block settings to this plugin's. A new install now runs no
+  migration and records the current schema version. It counts as new when no
+  version is recorded and no pet, setting, sync record or old Site Editor
+  customization exists. The check runs at activation too, so a site set up from
+  WP-CLI is not mistaken for an upgrade. Migrations 3 and 9 also leave alone
+  any old name another plugin registers, and deleting the plugin empties the old
+  names only on a site that never reached migration 9. Found by the
+  WordPress.org plugin review.
+
+### Changed
+- **`check-adoptions` answers only for pets the site has published.** It
+  reported any adopted draft, including a pet staff never published and one
+  the sync drafted on arrival because its status is hidden. A caller trying
+  IDs could learn that such a pet exists. A pet now carries
+  `_pet_first_listed` from the first time it is published, and migration 12
+  records it for older pets that were published, from the date WordPress kept.
+  Partner sites see no difference: they only ask about pets they featured.
+  Found by the WordPress.org plugin review.
+- **`wp shelterkit-pets export` writes only to STDOUT.** The `--file` option
+  is gone: redirect the output instead (`wp shelterkit-pets export > pets.csv`),
+  so where an export lands is the operator's choice. The WordPress.org review
+  asked that the plugin not write files to arbitrary paths.
+
 ## [2.1.0] - 2026-11-15
 
 ### Added

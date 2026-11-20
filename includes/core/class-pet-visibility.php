@@ -39,6 +39,14 @@ final class Pet_Visibility {
 	 */
 	public const META = '_pet_unlisted';
 
+	/**
+	 * When the site first published a pet, as a Unix time. Never cleared, so it
+	 * means the pet was shown at some point, whatever its status now.
+	 *
+	 * @since 2.2.0
+	 */
+	public const LISTED_META = '_pet_first_listed';
+
 	public const HIDDEN_UPSTREAM    = 'hidden';
 	public const STATUS_NOT_SHOWN   = 'status';
 	public const LEFT_FEED          = 'left_feed';
@@ -56,6 +64,36 @@ final class Pet_Visibility {
 		add_filter( "rest_{$taxonomy}_query", array( self::class, 'hide_from_rest_listing' ) );
 		add_filter( 'rest_request_before_callbacks', array( self::class, 'refuse_hidden_term' ), 10, 3 );
 		add_filter( 'display_post_states', array( self::class, 'post_states' ), 10, 2 );
+		add_action( 'transition_post_status', array( self::class, 'remember_listed' ), 10, 3 );
+	}
+
+	/**
+	 * Record the first time a pet is published, however it happens: the sync,
+	 * an import, the editor, or a scheduled pet going live.
+	 *
+	 * @since 2.2.0
+	 *
+	 * @param string        $new_status New post status.
+	 * @param string        $old_status Old post status.
+	 * @param \WP_Post|null $post       Post.
+	 */
+	public static function remember_listed( $new_status, $old_status, $post ): void {
+		if ( 'publish' !== $new_status || ! $post instanceof \WP_Post || 'vcps_pet' !== $post->post_type ) {
+			return;
+		}
+
+		add_post_meta( $post->ID, self::LISTED_META, time(), true );
+	}
+
+	/**
+	 * Whether the site has ever shown a pet: it is published now, or was.
+	 *
+	 * @since 2.2.0
+	 *
+	 * @param \WP_Post $post Pet.
+	 */
+	public static function was_listed( \WP_Post $post ): bool {
+		return 'publish' === $post->post_status || '' !== get_post_meta( $post->ID, self::LISTED_META, true );
 	}
 
 	public static function animal_taxonomy(): string {
@@ -107,8 +145,9 @@ final class Pet_Visibility {
 		 * Filters the statuses that count as adopted.
 		 *
 		 * Anyone may ask whether a pet has one of these, including a pet the
-		 * site no longer shows. Nothing else about an unlisted pet is shared.
-		 * Return an empty array to share nothing.
+		 * site no longer shows, but only of a pet the site has shown at some
+		 * point. Nothing else about an unlisted pet is shared. Return an empty
+		 * array to share nothing.
 		 *
 		 * @since 2.1.0
 		 *
