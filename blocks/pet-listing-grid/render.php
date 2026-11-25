@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Petsync\Core\Pet_Hydrator;
 
 // Don't render listing grid when viewing comparison.
-if ( isset( $_GET['compare'] ) && ! empty( $_GET['compare'] ) ) {
+if ( ! empty( Petsync_Helpers::query_param( 'compare' ) ) ) {
 	return;
 }
 
@@ -62,34 +62,34 @@ $filter_special_needs   = $attributes['filterSpecialNeeds'] ?? false;
 $compat_style           = $attributes['compatibilityStyle'] ?? 'chips';
 
 // === URL Parameters (for SSR + bookmarkable URLs) ===
-$search_query = sanitize_text_field( wp_unslash( $_GET['pet_search'] ?? '' ) );
-$paged        = max( 1, absint( $_GET['paged'] ?? 1 ) );
-$current_sort = sanitize_text_field( wp_unslash( $_GET['sort'] ?? '' ) );
+$search_query = Petsync_Helpers::query_param( 'pet_search' );
+$paged        = max( 1, (int) Petsync_Helpers::query_param( 'paged' ) );
+$current_sort = Petsync_Helpers::query_param( 'sort' );
 
 $url_filters = array(
-	'animal' => sanitize_text_field( wp_unslash( $_GET['filter_animal'] ?? '' ) ),
-	'breed'  => sanitize_text_field( wp_unslash( $_GET['filter_breed'] ?? '' ) ),
-	'age'    => sanitize_text_field( wp_unslash( $_GET['filter_age'] ?? '' ) ),
-	'sex'    => sanitize_text_field( wp_unslash( $_GET['filter_sex'] ?? '' ) ),
-	'size'   => sanitize_text_field( wp_unslash( $_GET['filter_size'] ?? '' ) ),
+	'animal' => Petsync_Helpers::query_param( 'filter_animal' ),
+	'breed'  => Petsync_Helpers::query_param( 'filter_breed' ),
+	'age'    => Petsync_Helpers::query_param( 'filter_age' ),
+	'sex'    => Petsync_Helpers::query_param( 'filter_sex' ),
+	'size'   => Petsync_Helpers::query_param( 'filter_size' ),
 	// No dropdown offers these three, but a term link does: every taxonomy
 	// page redirects here with its filter (see Term_Links), and the active
 	// chips below show it and let a visitor remove it.
-	'color'  => sanitize_text_field( wp_unslash( $_GET['filter_color'] ?? '' ) ),
-	'coat'   => sanitize_text_field( wp_unslash( $_GET['filter_coat'] ?? '' ) ),
-	'status' => sanitize_text_field( wp_unslash( $_GET['filter_status'] ?? '' ) ),
+	'color'  => Petsync_Helpers::query_param( 'filter_color' ),
+	'coat'   => Petsync_Helpers::query_param( 'filter_coat' ),
+	'status' => Petsync_Helpers::query_param( 'filter_status' ),
 );
 
 $url_compat = array(
-	'goodWithDogs'   => ! empty( $_GET['compat_goodWithDogs'] ),
-	'goodWithCats'   => ! empty( $_GET['compat_goodWithCats'] ),
-	'goodWithKids'   => ! empty( $_GET['compat_goodWithKids'] ),
-	'shotsCurrent'   => ! empty( $_GET['compat_shotsCurrent'] ),
-	'spayedNeutered' => ! empty( $_GET['compat_spayedNeutered'] ),
-	'housebroken'    => ! empty( $_GET['compat_housebroken'] ),
-	'specialNeeds'   => ! empty( $_GET['compat_specialNeeds'] ),
-	'hypoallergenic' => ! empty( $_GET['compat_hypoallergenic'] ),
-	'declawed'       => ! empty( $_GET['compat_declawed'] ),
+	'goodWithDogs'   => ! empty( Petsync_Helpers::query_param( 'compat_goodWithDogs' ) ),
+	'goodWithCats'   => ! empty( Petsync_Helpers::query_param( 'compat_goodWithCats' ) ),
+	'goodWithKids'   => ! empty( Petsync_Helpers::query_param( 'compat_goodWithKids' ) ),
+	'shotsCurrent'   => ! empty( Petsync_Helpers::query_param( 'compat_shotsCurrent' ) ),
+	'spayedNeutered' => ! empty( Petsync_Helpers::query_param( 'compat_spayedNeutered' ) ),
+	'housebroken'    => ! empty( Petsync_Helpers::query_param( 'compat_housebroken' ) ),
+	'specialNeeds'   => ! empty( Petsync_Helpers::query_param( 'compat_specialNeeds' ) ),
+	'hypoallergenic' => ! empty( Petsync_Helpers::query_param( 'compat_hypoallergenic' ) ),
+	'declawed'       => ! empty( Petsync_Helpers::query_param( 'compat_declawed' ) ),
 );
 
 // === Fetch Data via Ability ===
@@ -251,68 +251,16 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	)
 );
 
-// Context is on an inner element so it gets replaced when the
-// interactivity-router swaps the region's innerHTML on navigation.
-// wp_interactivity_data_wp_context() emits a properly escaped
-// data-wp-context attribute (JSON_HEX_* flags), preventing a single
-// quote in request-derived state (e.g. ?pet_search=') from breaking
-// out of the attribute. Do NOT hand-roll this with wp_json_encode().
-$inner_attributes = sprintf(
-	'%s data-wp-init="callbacks.init"',
-	wp_interactivity_data_wp_context( $context )
-);
-
 // === Compatibility Filters Config ===
+// Icon names. Petsync_Icons renders, and escapes, each one where it is output.
 $compat_icons = array(
-	'goodWithDogs'   => Petsync_Icons::get(
-		'dog',
-		array(
-			'width'  => 16,
-			'height' => 16,
-		)
-	),
-	'goodWithCats'   => Petsync_Icons::get(
-		'cat',
-		array(
-			'width'  => 16,
-			'height' => 16,
-		)
-	),
-	'goodWithKids'   => Petsync_Icons::get(
-		'child',
-		array(
-			'width'  => 16,
-			'height' => 16,
-		)
-	),
-	'shotsCurrent'   => Petsync_Icons::get(
-		'shield-check',
-		array(
-			'width'  => 16,
-			'height' => 16,
-		)
-	),
-	'spayedNeutered' => Petsync_Icons::get(
-		'check',
-		array(
-			'width'  => 16,
-			'height' => 16,
-		)
-	),
-	'housebroken'    => Petsync_Icons::get(
-		'house',
-		array(
-			'width'  => 16,
-			'height' => 16,
-		)
-	),
-	'specialNeeds'   => Petsync_Icons::get(
-		'heart-special',
-		array(
-			'width'  => 16,
-			'height' => 16,
-		)
-	),
+	'goodWithDogs'   => 'dog',
+	'goodWithCats'   => 'cat',
+	'goodWithKids'   => 'child',
+	'shotsCurrent'   => 'shield-check',
+	'spayedNeutered' => 'check',
+	'housebroken'    => 'house',
+	'specialNeeds'   => 'heart-special',
 );
 
 $compat_filters_config = array(
@@ -426,7 +374,15 @@ $filter_config = array(
 ?>
 
 <div <?php echo $wrapper_attributes; /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes() returns escaped HTML. */ ?>>
-<div class="pet-listing-grid__inner" <?php echo $inner_attributes; /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from wp_interactivity_data_wp_context() plus static directives. */ ?>>
+<?php
+// Context is on an inner element so it gets replaced when the
+// interactivity-router swaps the region's innerHTML on navigation.
+// wp_interactivity_data_wp_context() emits a properly escaped
+// data-wp-context attribute (JSON_HEX_* flags), preventing a single
+// quote in request-derived state (e.g. ?pet_search=') from breaking
+// out of the attribute. Do NOT hand-roll this with wp_json_encode().
+?>
+<div class="pet-listing-grid__inner" <?php echo wp_interactivity_data_wp_context( $context ); /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_interactivity_data_wp_context() returns an escaped attribute. */ ?> data-wp-init="callbacks.init">
 	<?php
 	if ( $show_filters || $show_search || $show_favorites_toggle ) :
 		// Count active filters for the toggle badge.
@@ -633,7 +589,17 @@ $filter_config = array(
 											aria-pressed="<?php echo $url_compat[ $key ] ? 'true' : 'false'; ?>"
 											data-wp-bind--aria-pressed="context.compatFilters.<?php echo esc_attr( $key ); ?>"
 										>
-											<span class="pet-listing-grid__compat-chip-icon" aria-hidden="true"><?php echo $filter['icon']; /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static plugin SVG from Petsync_Icons. */ ?></span>
+											<span class="pet-listing-grid__compat-chip-icon" aria-hidden="true">
+												<?php
+												Petsync_Icons::render(
+													$filter['icon'],
+													array(
+														'width'  => 16,
+														'height' => 16,
+													)
+												);
+												?>
+											</span>
 											<span class="pet-listing-grid__compat-chip-label"><?php echo esc_html( $filter['label'] ); ?></span>
 											<span class="pet-listing-grid__compat-chip-count">(<?php echo esc_html( $count ); ?>)</span>
 										</button>
@@ -646,7 +612,17 @@ $filter_config = array(
 												data-compat-key="<?php echo esc_attr( $key ); ?>"
 												<?php checked( $url_compat[ $key ] ); ?>
 											>
-											<span class="pet-listing-grid__compat-checkbox-icon" aria-hidden="true"><?php echo $filter['icon']; /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static plugin SVG from Petsync_Icons. */ ?></span>
+											<span class="pet-listing-grid__compat-checkbox-icon" aria-hidden="true">
+												<?php
+												Petsync_Icons::render(
+													$filter['icon'],
+													array(
+														'width'  => 16,
+														'height' => 16,
+													)
+												);
+												?>
+											</span>
 											<span class="pet-listing-grid__compat-checkbox-label"><?php echo esc_html( $filter['label'] ); ?></span>
 											<span class="pet-listing-grid__compat-checkbox-count">(<?php echo esc_html( $count ); ?>)</span>
 										</label>
@@ -963,9 +939,7 @@ $filter_config = array(
 								aria-label="<?php esc_attr_e( 'Toggle favorite', 'shelterkit-pets' ); ?>"
 							>
 								<?php
-								echo Petsync_Icons::get_heart_interactive( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG.
-									array()
-								);
+								Petsync_Icons::render_heart();
 								?>
 							</button>
 

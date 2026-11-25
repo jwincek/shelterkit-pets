@@ -92,7 +92,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					data-wp-bind--aria-pressed="state.isFavorited"
 					data-wp-bind--aria-label="state.favoriteLabel"
 				>
-					<?php echo Petsync_Icons::get_heart_interactive(); /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG. */ ?>
+					<?php Petsync_Icons::render_heart(); ?>
 					<span class="screen-reader-text"><?php esc_html_e( 'Favorite', 'shelterkit-pets' ); ?></span>
 				</button>
 			<?php endif; ?>

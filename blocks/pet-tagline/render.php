@@ -92,14 +92,17 @@ $wrapper_attributes = get_block_wrapper_attributes(
 ?>
 <p <?php echo $wrapper_attributes; /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes() returns escaped HTML. */ ?>>
 	<?php
-	$parts = array();
-	foreach ( $items as $item ) {
+	// No whitespace between the parts: the separator carries its own spacing.
+	foreach ( $items as $index => $item ) {
+		if ( $index > 0 ) {
+			echo '<span class="pet-details__tagline-sep" aria-hidden="true">' . esc_html( $separator ) . '</span>';
+		}
+
 		if ( $item['link'] ) {
-			$parts[] = '<a href="' . esc_url( $item['link'] ) . '" class="pet-details__tagline-link">' . esc_html( $item['label'] ) . '</a>';
+			echo '<a href="' . esc_url( $item['link'] ) . '" class="pet-details__tagline-link">' . esc_html( $item['label'] ) . '</a>';
 		} else {
-			$parts[] = esc_html( $item['label'] );
+			echo esc_html( $item['label'] );
 		}
 	}
-	echo implode( '<span class="pet-details__tagline-sep" aria-hidden="true">' . esc_html( $separator ) . '</span>', $parts ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built with proper escaping above.
 	?>
 </p>

@@ -83,6 +83,9 @@ runtime:
 14. Post-type comparisons in editor scripts name a real post type.
 15. No Interactivity directive sits on or inside an `<svg>`.
 16. `uninstall.php` deletes every taxonomy `taxonomies.json` declares.
+17. A second `watch`, `init` or `run` directive on an element uses a
+    three-hyphen unique ID (`data-wp-watch---name`), which WordPress 7.2
+    requires.
 
 ### Plugin Check
 

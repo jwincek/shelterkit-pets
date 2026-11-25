@@ -542,14 +542,74 @@ class Petsync_Icons {
 	);
 
 	/**
-	 * Render an icon as HTML.
+	 * Render an icon as HTML, escaped against allowed_html().
 	 *
 	 * @param string $name  Icon name.
 	 * @param array  $attrs Optional. Override default attributes.
 	 * @return void
 	 */
 	public static function render( string $name, array $attrs = array() ): void {
-		echo self::get( $name, $attrs ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo wp_kses( self::get( $name, $attrs ), self::allowed_html() );
+	}
+
+	/**
+	 * Render a favorite button's heart, escaped against allowed_html().
+	 *
+	 * @param array $attrs Optional. SVG attributes. See get_heart_interactive().
+	 * @return void
+	 */
+	public static function render_heart( array $attrs = array() ): void {
+		echo wp_kses( self::get_heart_interactive( $attrs ), self::allowed_html() );
+	}
+
+	/**
+	 * The markup an icon is made of, for wp_kses().
+	 *
+	 * Every icon is escaped against this where it is echoed, so a change to
+	 * how icons are built cannot put anything else on the page. It lists only
+	 * what get() and get_heart_interactive() produce. Keys are lowercase
+	 * because wp_kses() compares them that way; the output keeps `viewBox`.
+	 *
+	 * @return array<string, array<string, true>>
+	 */
+	public static function allowed_html(): array {
+		$paint = array(
+			'fill'            => true,
+			'stroke'          => true,
+			'stroke-width'    => true,
+			'stroke-linecap'  => true,
+			'stroke-linejoin' => true,
+		);
+
+		return array(
+			'svg'      => $paint + array(
+				'class'       => true,
+				'width'       => true,
+				'height'      => true,
+				'viewbox'     => true,
+				'aria-hidden' => true,
+				'focusable'   => true,
+			),
+			'path'     => $paint + array( 'd' => true ),
+			'circle'   => $paint + array(
+				'cx' => true,
+				'cy' => true,
+				'r'  => true,
+			),
+			'line'     => $paint + array(
+				'x1' => true,
+				'y1' => true,
+				'x2' => true,
+				'y2' => true,
+			),
+			'rect'     => $paint + array(
+				'x'      => true,
+				'y'      => true,
+				'width'  => true,
+				'height' => true,
+			),
+			'polyline' => $paint + array( 'points' => true ),
+		);
 	}
 
 	/**

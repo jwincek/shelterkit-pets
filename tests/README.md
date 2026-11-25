@@ -63,7 +63,7 @@ that prompted it.
 
 | Area | Tests |
 |---|---|
-| What the public can read | `StaffOnlyFieldsTest`, `VisitorStateSecurityTest`, `ReadAbilitiesTest`, `AbilityStatusDefaultTest`, `AbilityOutputSchemaTest`, `McpExposureTest`, `BatchGetPetsTest`, `SharedComparisonTest`, `MetaSanitizersTest` |
+| What the public can read | `StaffOnlyFieldsTest`, `VisitorStateSecurityTest`, `ReadAbilitiesTest`, `AbilityStatusDefaultTest`, `AbilityOutputSchemaTest`, `McpExposureTest`, `BatchGetPetsTest`, `SharedComparisonTest`, `MetaSanitizersTest`, `LateEscapingTest` |
 | Hydration and the data model | `HydratorPrecedenceTest`, `HydrationShapesTest`, `HydrationQueryCountTest`, `TristateTest` (unit), `AttributeTermsTest`, `DefaultStatusTest`, `BlockBindingAliasTest`, `CacheFlushTest`, `BondedPairsTest` |
 | Providers and sync | `ProviderMapTest`, `ProviderScopingTest`, `ApiShapesTest`, `AdoptAPetProviderTest`, `RescueGroupsProviderTest`, `StalenessTest`, `SyncScheduleTest`, `SyncAttributeTermsTest`, `SyncPublishStateTest`, `PetVisibilityTest`, `SyncSpeciesTest`, `SyncPhotoRecoveryTest`, `ImageBudgetTest` |
 | Import and export | `CsvImportTest`, `CsvRoundTripTest`, `ImportPreviewTest`, `SpreadsheetFormatsTest`, `ImportPhotosTest`, `ExportTest`, `ExportUnpublishedTest` |

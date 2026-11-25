@@ -125,7 +125,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		?>
 		"
 	>
-		<?php echo Petsync_Icons::get_heart_interactive(); /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG. */ ?>
+		<?php Petsync_Icons::render_heart(); ?>
 		<span class="pet-actions__label" data-wp-text="state.favoriteButtonText">
 			<?php
 			echo $is_favorited

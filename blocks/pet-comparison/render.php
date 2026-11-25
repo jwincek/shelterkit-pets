@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Only render if compare parameter is in URL.
-if ( ! isset( $_GET['compare'] ) || empty( $_GET['compare'] ) ) {
+if ( empty( Petsync_Helpers::query_param( 'compare' ) ) ) {
 	return;
 }
 
@@ -299,7 +299,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							aria-pressed="<?php echo $is_favorited ? 'true' : 'false'; ?>"
 						>
 							<?php
-								echo Petsync_Icons::get_heart_interactive( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG.
+								Petsync_Icons::render_heart(
 									array(
 										'width'  => 18,
 										'height' => 18,
@@ -420,7 +420,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								aria-label="<?php echo esc_attr( sprintf( /* translators: %s: pet name */ __( 'Favorite %s', 'shelterkit-pets' ), $pet['name'] ) ); ?>"
 							>
 								<?php
-									echo Petsync_Icons::get_heart_interactive( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG.
+									Petsync_Icons::render_heart(
 										array(
 											'width'  => 16,
 											'height' => 16,
@@ -438,15 +438,18 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<!-- Footer -->
 	<div class="pet-comparison__footer">
 		<?php
-		// If the user arrived from a single pet page, show a return link.
-		// The compare bar passes ?from=<pet-url> when on a single-pet template.
-		$from_url = isset( $_GET['from'] ) ? esc_url_raw( wp_unslash( $_GET['from'] ) ) : '';
-		if ( $from_url && wp_http_validate_url( $from_url ) ) :
-			// Resolve the pet name from the URL — find the post by its permalink.
-			$from_post_id  = url_to_postid( $from_url );
-			$from_pet_name = $from_post_id ? get_the_title( $from_post_id ) : '';
+		// If the visitor came from a pet's page, link back to it. The compare
+		// bar passes that pet's ID as ?from=. Only a published pet on this
+		// site gets a link, and the link is its own permalink: a URL in the
+		// query string is never printed, so a crafted link cannot point a
+		// visitor elsewhere from the shelter's own page.
+		// get_post( 0 ) would return the global post, so a missing ID is no pet.
+		$from_id  = (int) Petsync_Helpers::query_param( 'from' );
+		$from_pet = $from_id > 0 ? get_post( $from_id ) : null;
+		if ( $from_pet && 'vcps_pet' === $from_pet->post_type && is_post_publicly_viewable( $from_pet ) ) :
+			$from_pet_name = get_the_title( $from_pet );
 			?>
-			<a href="<?php echo esc_url( $from_url ); ?>" class="pet-comparison__back-link pet-comparison__back-link--pet">
+			<a href="<?php echo esc_url( get_permalink( $from_pet ) ); ?>" class="pet-comparison__back-link pet-comparison__back-link--pet">
 				<?php
 				Petsync_Icons::render(
 					'back',

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Upgrading from a version before 2.2.0.** The twelve migrations that
+  brought older sites' data up to date are gone, as are the pre-1.0 scripts in
+  `migration-scripts/`. They worked on names this plugin stopped using in 2.0,
+  among them `pet_*` taxonomy names that another plugin may own, and every site
+  known to run the plugin has since upgraded. A site still on an older version
+  should install 2.2.0 first and load any admin page, then update to this one.
+  If it skips that step, its data is left as it is and administrators see a
+  notice on the Plugins and pet screens saying what to do; `wp shelterkit-pets
+  migrate` says the same. Uninstalling no longer looks for data under the old
+  names either. Found by the WordPress.org plugin review, which flagged the old
+  names in migrations 3 and 9.
+
+### Fixed
+- **The comparison page could link anywhere.** Its "Continue viewing" link
+  printed whatever URL the address bar's `from=` held, so a crafted link to the
+  shelter's own comparison page could send a visitor to another site. `from=`
+  now carries a pet's ID, and the link goes to that pet's own page, only if
+  it is published. Older links with a URL there show the page without it.
+  Found by the WordPress.org plugin review.
+- **On WordPress 7.2, the favorites window would not update.** Its two
+  `data-wp-watch` directives used the two-hyphen form of a unique ID, which
+  WordPress 6.9 deprecated and 7.2 ignores, so the window would keep showing
+  what the page loaded with. They use three hyphens now, and validator check
+  17 rejects the old form.
+- **Icons, the adoption button and the tagline are escaped where they are
+  printed,** rather than built safely in one place and printed in another,
+  as the WordPress.org review asked. Icons are escaped against an SVG
+  allowlist that a test holds to every icon the plugin draws. One visible
+  difference: a PDF application whose file is not on the server, as with
+  offloaded media, no longer shows an empty "()" for its size.
+
 ## [2.2.0] - 2026-11-20
 
 ### Fixed

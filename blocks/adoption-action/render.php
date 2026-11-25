@@ -45,111 +45,54 @@ if ( ! \Petsync\Core\Pet_Visibility::takes_applications( $pet ) ) {
 
 $form_mode = $attributes['formMode'] ?? 'petstablished';
 
-$has_action  = false;
-$action_html = '';
+// What the button does, worked out first and escaped only where it is output.
+// The download link adds the file's name and size below it.
+$action = null;
 
 if ( $form_mode === 'pdf' ) {
-	$pdf_id = (int) ( $attributes['pdfAttachmentId'] ?? 0 );
-	if ( $pdf_id && get_post( $pdf_id ) ) {
-		$pdf_url      = wp_get_attachment_url( $pdf_id );
-		$pdf_filename = basename( get_attached_file( $pdf_id ) );
-		$pdf_filesize = size_format( filesize( get_attached_file( $pdf_id ) ), 1 );
-		$pdf_text     = $attributes['pdfButtonText'] ?? __( 'Download Adoption Application', 'shelterkit-pets' );
+	$pdf_id   = (int) ( $attributes['pdfAttachmentId'] ?? 0 );
+	$pdf_url  = $pdf_id && get_post( $pdf_id ) ? wp_get_attachment_url( $pdf_id ) : '';
+	$pdf_file = $pdf_url ? get_attached_file( $pdf_id ) : '';
 
-		if ( $pdf_url ) {
-			$has_action = true;
-			ob_start();
-			?>
-			<div class="pet-adoption-cta__file">
-				<a
-					href="<?php echo esc_url( $pdf_url ); ?>"
-					class="pet-adoption-cta__action-btn"
-					download
-				>
-					<?php
-					Petsync_Icons::render(
-						'download',
-						array(
-							'width'  => 18,
-							'height' => 18,
-						)
-					);
-					?>
-					<span><?php echo esc_html( $pdf_text ); ?></span>
-				</a>
-				<span class="pet-adoption-cta__file-meta">
-					<?php echo esc_html( $pdf_filename ); ?>
-					<span class="pet-adoption-cta__file-size">(<?php echo esc_html( $pdf_filesize ); ?>)</span>
-				</span>
-			</div>
-			<?php
-			$action_html = ob_get_clean();
-		}
+	if ( $pdf_url && $pdf_file ) {
+		$action = array(
+			'url'      => $pdf_url,
+			'text'     => $attributes['pdfButtonText'] ?? __( 'Download Adoption Application', 'shelterkit-pets' ),
+			'icon'     => 'download',
+			'filename' => basename( $pdf_file ),
+			// Empty where the file is not on this server, as with offloaded media.
+			'filesize' => file_exists( $pdf_file ) ? (string) size_format( filesize( $pdf_file ), 1 ) : '',
+		);
 	}
 } elseif ( $form_mode === 'page' ) {
-	$page_id = (int) ( $attributes['pageId'] ?? 0 );
-	$page    = $page_id ? get_post( $page_id ) : null;
+	$page_id  = (int) ( $attributes['pageId'] ?? 0 );
+	$page     = $page_id ? get_post( $page_id ) : null;
+	$page_url = $page && 'publish' === $page->post_status ? get_permalink( $page ) : '';
 
-	if ( $page && 'publish' === $page->post_status ) {
-		$page_url  = get_permalink( $page );
-		$page_text = $attributes['pageButtonText'] ?? __( 'View Adoption Resources', 'shelterkit-pets' );
-
-		if ( $page_url ) {
-			$has_action = true;
-			ob_start();
-			?>
-			<a
-				href="<?php echo esc_url( $page_url ); ?>"
-				class="pet-adoption-cta__action-btn"
-			>
-				<span><?php echo esc_html( $page_text ); ?></span>
-				<?php
-				Petsync_Icons::render(
-					'arrow-right',
-					array(
-						'width'  => 18,
-						'height' => 18,
-					)
-				);
-				?>
-			</a>
-			<?php
-			$action_html = ob_get_clean();
-		}
+	if ( $page_url ) {
+		$action = array(
+			'url'  => $page_url,
+			'text' => $attributes['pageButtonText'] ?? __( 'View Adoption Resources', 'shelterkit-pets' ),
+			'icon' => 'arrow-right',
+		);
 	}
-} else {
-	$adoption_url = $pet['adoption_form_url'] ?? '';
-	$button_text  = $attributes['buttonText'] ?? __( 'Start Adoption Application', 'shelterkit-pets' );
-
-	if ( $adoption_url ) {
-		$has_action = true;
-		ob_start();
-		?>
-		<a
-			href="<?php echo esc_url( $adoption_url ); ?>"
-			class="pet-adoption-cta__action-btn"
-			target="_blank"
-			rel="noopener noreferrer"
-		>
-			<span><?php echo esc_html( $button_text ); ?></span>
-			<?php
-			Petsync_Icons::render(
-				'external-link',
-				array(
-					'width'  => 18,
-					'height' => 18,
-				)
-			);
-			?>
-		</a>
-		<?php
-		$action_html = ob_get_clean();
-	}
+} elseif ( ! empty( $pet['adoption_form_url'] ) ) {
+	$action = array(
+		'url'      => $pet['adoption_form_url'],
+		'text'     => $attributes['buttonText'] ?? __( 'Start Adoption Application', 'shelterkit-pets' ),
+		'icon'     => 'external-link',
+		'external' => true,
+	);
 }
 
-if ( ! $has_action ) {
+if ( ! $action ) {
 	return;
 }
+
+$icon_size = array(
+	'width'  => 18,
+	'height' => 18,
+);
 
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
@@ -158,5 +101,34 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <div <?php echo $wrapper_attributes; /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes() returns escaped HTML. */ ?>>
-	<?php echo $action_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above with proper escaping. ?>
+	<?php if ( isset( $action['filename'] ) ) : ?>
+		<div class="pet-adoption-cta__file">
+			<a
+				href="<?php echo esc_url( $action['url'] ); ?>"
+				class="pet-adoption-cta__action-btn"
+				download
+			>
+				<?php Petsync_Icons::render( $action['icon'], $icon_size ); ?>
+				<span><?php echo esc_html( $action['text'] ); ?></span>
+			</a>
+			<span class="pet-adoption-cta__file-meta">
+				<?php echo esc_html( $action['filename'] ); ?>
+				<?php if ( '' !== $action['filesize'] ) : ?>
+					<span class="pet-adoption-cta__file-size">(<?php echo esc_html( $action['filesize'] ); ?>)</span>
+				<?php endif; ?>
+			</span>
+		</div>
+	<?php else : ?>
+		<a
+			href="<?php echo esc_url( $action['url'] ); ?>"
+			class="pet-adoption-cta__action-btn"
+			<?php if ( ! empty( $action['external'] ) ) : ?>
+				target="_blank"
+				rel="noopener noreferrer"
+			<?php endif; ?>
+		>
+			<span><?php echo esc_html( $action['text'] ); ?></span>
+			<?php Petsync_Icons::render( $action['icon'], $icon_size ); ?>
+		</a>
+	<?php endif; ?>
 </div>

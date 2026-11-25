@@ -638,10 +638,14 @@ class Petsync_Admin {
 	}
 
 	public function display_notices(): void {
+		// The result of a sync, passed back by the redirect after it. It only
+		// picks which of three fixed messages to show, and changes nothing.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only, see above.
 		if ( ! isset( $_GET['petsync_sync'] ) ) {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only, see above.
 		$status  = sanitize_text_field( wp_unslash( $_GET['petsync_sync'] ) );
 		$message = '';
 		$type    = 'success';

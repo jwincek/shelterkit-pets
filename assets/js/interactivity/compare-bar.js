@@ -145,10 +145,10 @@ const { state, actions, callbacks } = store( 'petsync/compare-bar', {
 				getGlobalState().comparison.join( ',' )
 			);
 
-			// If we're on a single pet page, pass its URL so the comparison
-			// page can offer a "Continue viewing [Pet]" link back.
-			if ( document.body.classList.contains( 'single-vcps_pet' ) ) {
-				url.searchParams.set( 'from', window.location.href );
+			// On a pet's own page, pass its ID so the comparison page can
+			// offer a "Continue viewing [Pet]" link back to it.
+			if ( ctx.fromPetId ) {
+				url.searchParams.set( 'from', String( ctx.fromPetId ) );
 			}
 
 			window.location.href = url.toString();

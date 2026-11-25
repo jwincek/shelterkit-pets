@@ -46,6 +46,8 @@
  *                     notice on every render.
  *  16. uninstall-taxonomies — uninstall.php deletes every taxonomy
  *                     taxonomies.json declares.
+ *  17. directive-ids — a second watch, init or run directive on one element
+ *                     is told apart with three hyphens, not two.
  *
  * Usage:
  *   php bin/validate-config.php [--format=human|json]
@@ -1233,6 +1235,27 @@ if ( '' !== $uninstall_src ) {
 
 	foreach ( array_diff( $covered, $expected ) as $extra ) {
 		$add( 'warning', 'uninstall', "uninstall.php deletes taxonomy '$extra', which taxonomies.json does not declare." );
+	}
+}
+
+// ── Check 17: unique directive IDs use three hyphens ─────────────────────────
+// watch, init and run take no suffix, so a second one on the same element
+// needs a unique ID: data-wp-watch---cards. WordPress 6.9 deprecated the
+// two-hyphen form, data-wp-watch--cards, and 7.2 skips it, so the directive
+// silently never runs. The favorites modal's two watches were written that way.
+$directive_files = array_merge(
+	$markup_files,
+	glob( $root . '/assets/js/*.js' ) ?: [],
+	glob( $root . '/assets/js/*/*.js' ) ?: [],
+	glob( $root . '/blocks/*/*.js' ) ?: []
+);
+foreach ( $directive_files as $directive_file ) {
+	$source = (string) file_get_contents( $directive_file );
+	if ( preg_match_all( '/data-wp-(?:watch|init|run)--(?!-)[A-Za-z0-9_]/', $source, $found, PREG_OFFSET_CAPTURE ) ) {
+		foreach ( $found[0] as [ $match, $offset ] ) {
+			$line = substr_count( substr( $source, 0, $offset ), "\n" ) + 1;
+			$add( 'error', 'directive-ids', substr( $directive_file, strlen( $root ) + 1 ) . ":$line uses a two-hyphen unique ID ({$match}…), which WordPress 7.2 ignores. Use three hyphens: data-wp-watch---name." );
+		}
 	}
 }
 

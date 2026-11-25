@@ -32,7 +32,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		aria-label="<?php esc_attr_e( 'View favorites', 'shelterkit-pets' ); ?>"
 	>
 		<?php
-		echo Petsync_Icons::get_heart_interactive( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG.
+		Petsync_Icons::render_heart(
 			array(
 				'width'  => 20,
 				'height' => 20,

@@ -163,7 +163,7 @@ function petsync_init(): void {
 
 			$compat_clauses = [];
 			foreach ( $compat_map as $input_key => $term_slug ) {
-				if ( ! empty( $_GET[ 'compat_' . $input_key ] ) ) {
+				if ( ! empty( Petsync_Helpers::query_param( 'compat_' . $input_key ) ) ) {
 					$compat_clauses[] = [
 						'taxonomy' => $attribute_tax,
 						'field'    => 'slug',
