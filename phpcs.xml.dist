@@ -16,7 +16,6 @@
 	     before a rename. -->
 	<exclude-pattern>/build/*</exclude-pattern>
 	<!-- Dev-only tooling, not shipped in the plugin zip (see .distignore). -->
-	<exclude-pattern>/migration-scripts/*</exclude-pattern>
 	<exclude-pattern>/bin/*</exclude-pattern>
 
 	<!-- Warnings stay visible but don't fail CI; errors do. -->

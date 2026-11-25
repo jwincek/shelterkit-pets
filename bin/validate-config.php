@@ -44,8 +44,8 @@
  *  15. svg-directives — no Interactivity directive sits on or inside an
  *                     <svg>, which the server-side processor refuses with a
  *                     notice on every render.
- *  16. uninstall-taxonomies — uninstall.php deletes every taxonomy name, the
- *                     current ones and those before migration 9.
+ *  16. uninstall-taxonomies — uninstall.php deletes every taxonomy
+ *                     taxonomies.json declares.
  *
  * Usage:
  *   php bin/validate-config.php [--format=human|json]
@@ -818,14 +818,14 @@ if ( isset( $readme_src ) ) {
 // ── Check 10: uninstall knows every wp_theme namespace ──────────────────────
 //
 // Site Editor customizations are filed under a wp_theme term named after the
-// plugin, so that name is a storage key. Petsync_Templates owns the current
-// name and the historical ones; uninstall.php has to repeat the list, because
-// the plugin is not loaded during uninstall and the constants are unreachable
-// there.
+// plugin, so that name is a storage key. Petsync_Templates owns it;
+// uninstall.php has to repeat it, because the plugin is not loaded during
+// uninstall and the constant is unreachable there.
 //
-// A duplicated list is exactly the drift that made migration 4 necessary in the
-// first place, so it is checked rather than trusted. Getting this wrong leaves
-// a deleted plugin's template posts and terms behind in the database.
+// A name written out in more than one place is exactly the drift that once
+// needed a migration to repair, so it is checked rather than trusted. Getting
+// this wrong leaves a deleted plugin's template posts and terms behind in the
+// database.
 $templates_src = $read( 'includes/class-petsync-templates.php' );
 $uninstall_src = $read( 'uninstall.php' );
 
@@ -836,11 +836,6 @@ if ( '' !== $templates_src && '' !== $uninstall_src ) {
 		$declared[] = $cm[1];
 	} else {
 		$add( 'error', 'uninstall', 'Petsync_Templates::THEME_NAMESPACE not found — check 10 cannot verify uninstall coverage.' );
-	}
-
-	if ( preg_match( '/const\s+LEGACY_NAMESPACES\s*=\s*(?:array\(|\[)(.*?)(?:\)|\]);/s', $templates_src, $lm ) ) {
-		preg_match_all( "/'([^']+)'/", $lm[1], $names );
-		$declared = array_merge( $declared, $names[1] );
 	}
 
 	// The list uninstall.php actually deletes.
@@ -1216,23 +1211,13 @@ if ( is_file( $icons_file ) ) {
 }
 
 // ── Check 16: uninstall knows every taxonomy name ───────────────────────────
-// uninstall.php cannot load the plugin, so it lists the taxonomies itself: the
-// current names from taxonomies.json, and the names before migration 9 from
-// petsync_taxonomy_renames(), for an install deleted before that migration ran.
-// A name missing there leaves its terms in the database on delete, and nothing
-// reports it. Same reasoning as check 10.
+// uninstall.php cannot load the plugin, so it lists the taxonomies from
+// taxonomies.json itself. A name missing there leaves its terms in the database
+// on delete, and nothing reports it. Same reasoning as check 10.
 $uninstall_src = $read( 'uninstall.php' );
-$main_src      = null !== $main_file ? (string) file_get_contents( $main_file ) : '';
 
-if ( '' !== $uninstall_src && '' !== $main_src ) {
+if ( '' !== $uninstall_src ) {
 	$expected = array_keys( $taxonomies_json['taxonomies'] ?? [] );
-
-	if ( preg_match( '/function\s+petsync_taxonomy_renames\(\).*?return\s+array\((.*?)\);/s', $main_src, $rm ) ) {
-		preg_match_all( "/'([a-z_]+)'\s*=>/", $rm[1], $legacy );
-		$expected = array_merge( $expected, $legacy[1] );
-	} else {
-		$add( 'error', 'uninstall', 'petsync_taxonomy_renames() not found — check 16 cannot verify that uninstall covers the pre-9 taxonomy names.' );
-	}
 
 	$covered = [];
 	if ( preg_match( '/\$taxonomies\s*=\s*array\((.*?)\);/s', $uninstall_src, $um ) ) {
@@ -1247,7 +1232,7 @@ if ( '' !== $uninstall_src && '' !== $main_src ) {
 	}
 
 	foreach ( array_diff( $covered, $expected ) as $extra ) {
-		$add( 'warning', 'uninstall', "uninstall.php deletes taxonomy '$extra', which neither taxonomies.json nor petsync_taxonomy_renames() declares." );
+		$add( 'warning', 'uninstall', "uninstall.php deletes taxonomy '$extra', which taxonomies.json does not declare." );
 	}
 }
 

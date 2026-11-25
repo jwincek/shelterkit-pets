@@ -69,7 +69,7 @@ that prompted it.
 | Import and export | `CsvImportTest`, `CsvRoundTripTest`, `ImportPreviewTest`, `SpreadsheetFormatsTest`, `ImportPhotosTest`, `ExportTest`, `ExportUnpublishedTest` |
 | Kennel cards and the shelter profile | `KennelCardsTest`, `CardWrappingTest`, `CardShelterDetailsTest`, `EditorPreviewTest`, `ShelterProfileTest`, `AnimalShelterSchemaTest` |
 | Editor scripts and controls | `PetHealthControlsTest`, `ScriptTranslationsTest`, `ScriptDependenciesTest`, `HeartIconTest` |
-| Install lifecycle | `MigrationsTest`, `TaxonomyRenameMigrationTest`, `UninstallTest` |
+| Install lifecycle | `MigrationsTest`, `UninstallTest` |
 | Taxonomy pages, links and REST routes | `TermLinksTest`, `TaxonomyRestTest` |
 
 A few of the bugs behind them, as a sense of what the suite is for:

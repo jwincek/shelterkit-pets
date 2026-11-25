@@ -112,8 +112,8 @@ class Petsync_Admin {
 			// Statuses whose synced pets are published. See Pet_Visibility.
 			'public_statuses'          => \Petsync\Core\Pet_Visibility::DEFAULT_PUBLIC_STATUSES,
 			// Species the sync asks Petstablished for. Empty is every species.
-			// Sites that synced before this setting existed keep cats and dogs,
-			// which is what the sync used to ask for; see migration 11.
+			// Sites that synced before this setting existed (before 2.0) were
+			// given cats and dogs, which is what the sync used to ask for.
 			'sync_species'             => array(),
 		);
 	}

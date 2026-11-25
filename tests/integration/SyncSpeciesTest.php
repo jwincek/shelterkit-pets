@@ -141,30 +141,6 @@ final class SyncSpeciesTest extends PetTestCase {
 		$this->assertSame( array( 'Rabbit' ), wp_get_object_terms( $pets[0], 'vcps_pet_animal', array( 'fields' => 'names' ) ) );
 	}
 
-	/**
-	 * A site already syncing keeps what it synced: nothing new appears on it
-	 * until someone chooses so. A site not yet syncing gets every species.
-	 */
-	public function test_the_upgrade_keeps_cats_and_dogs_only_where_a_sync_already_ran(): void {
-		update_option( 'petsync_settings', array( 'public_key' => 'pk_live' ) );
-		petsync_migrate_11_sync_species();
-		$this->assertSame( array( 'Cat', 'Dog' ), Petsync_Admin::get_settings()['sync_species'] );
-
-		update_option( 'petsync_settings', array( 'public_key' => '' ) );
-		petsync_migrate_11_sync_species();
-		$this->assertSame( array(), Petsync_Admin::get_settings()['sync_species'] );
-
-		update_option(
-			'petsync_settings',
-			array(
-				'public_key'   => 'pk_live',
-				'sync_species' => array( 'Rabbit' ),
-			)
-		);
-		petsync_migrate_11_sync_species();
-		$this->assertSame( array( 'Rabbit' ), Petsync_Admin::get_settings()['sync_species'], 'a choice already made is kept' );
-	}
-
 	public function test_saving_the_settings_keeps_the_species(): void {
 		$saved = ( new Petsync_Admin() )->sanitize_settings( array( 'sync_species' => ' Cat, Dog ,, Rabbit, cat ' ) );
 

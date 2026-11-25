@@ -98,11 +98,6 @@ register_deactivation_hook(
 	__FILE__,
 	function (): void {
 		wp_clear_scheduled_hook( 'petsync_scheduled_sync' );
-		// Also the pre-1.0 hook name, matching uninstall.php. The rename
-		// migration normally clears this, but it only runs once an admin page
-		// has loaded — deactivating straight after an upgrade would otherwise
-		// leave a recurring event scheduled against a hook nothing answers.
-		wp_clear_scheduled_hook( 'petstablished_scheduled_sync' );
 		// Photos an import has yet to download. The pets keep their queue, and
 		// the next import schedules it again.
 		wp_clear_scheduled_hook( 'petsync_import_photos' );
@@ -356,55 +351,45 @@ add_action( 'plugins_loaded', 'petsync_init' );
 define( 'PETSYNC_DB_VERSION', 12 );
 
 /**
+ * The oldest stored-data version this build can upgrade from.
+ *
+ * 12 is what 2.2.0 leaves behind. 3.0.0 removed the twelve migrations that
+ * brought older data up to it, after the last site running an older version
+ * had upgraded. They worked on names this plugin no longer uses, among them
+ * taxonomy names that another plugin may own. A site with older data is told
+ * to install 2.2.0 first (see petsync_upgrade_unsupported()), and the rail
+ * leaves its data alone: running a later migration on it would record a
+ * version whose earlier steps never ran.
+ *
+ * Raise this only together with removing migrations, and only once no site
+ * can still be below the new value.
+ */
+define( 'PETSYNC_DB_VERSION_MIN', 12 );
+
+/**
  * The ordered migration list.
  *
- * Keyed by the schema version each migration brings the install UP TO. They run
- * in key order, and only those above the installed version run. A new install
- * runs none of them (see petsync_is_new_install()). Every migration must still
- * be idempotent and no-op cleanly when there is nothing to convert: an upgrade
- * from a build older than the rail starts at 0 and runs the whole list.
+ * Keyed by the schema version each migration brings the install UP TO, each
+ * above PETSYNC_DB_VERSION_MIN. They run in key order, and only those above the
+ * installed version run. A new install runs none of them (see
+ * petsync_is_new_install()). Every migration must be idempotent: the rail
+ * retries one that fails.
+ *
+ * Empty since 3.0.0. The next change to stored data adds `13 => ...` here.
  *
  * @return array<int, callable> Migration callables keyed by target version.
  */
 function petsync_get_migrations(): array {
-	return array(
-		1  => 'petsync_migrate_1_option_names',
-		2  => 'petsync_migrate_2_provider_meta',
-		3  => 'petsync_migrate_3_default_status',
-		4  => 'petsync_migrate_4_template_namespace',
-		// The same callable again, deliberately. It is driven entirely by
-		// Petsync_Templates::THEME_NAMESPACE and LEGACY_NAMESPACES, so the
-		// shelter-pets -> shelterkit-pets rename needs no new logic — only a
-		// new version, because installs already at 4 will never re-run 4.
-		//
-		// Point any future rename at this same callable in the same way.
-		5  => 'petsync_migrate_4_template_namespace',
-		6  => 'petsync_migrate_6_field_renames',
-		7  => 'petsync_migrate_7_backfill_attribute_terms',
-		8  => 'petsync_migrate_8_seed_last_seen',
-		9  => 'petsync_migrate_9_taxonomy_prefix',
-		// Migration 7's callable again, as 5 reuses 4. Until #125 the sync
-		// derived a pet's compatibility terms before storing the data they come
-		// from, so every pet first synced since then has none, and every pet
-		// changed since has its previous terms. The backfill is the same.
-		10 => 'petsync_migrate_7_backfill_attribute_terms',
-		11 => 'petsync_migrate_11_sync_species',
-		12 => 'petsync_migrate_12_first_listed',
-	);
+	return array();
 }
 
 /**
  * Whether this site is a new install, with nothing for the migration rail to
  * convert.
  *
- * The rail exists for sites upgrading from older builds, and its early
- * migrations work on names this plugin no longer uses, among them the pet_*
- * taxonomies. Those names may belong to another plugin on a new site, so a new
- * site must not run them. It records the current schema version instead.
- *
- * A site counts as new only when no version is recorded and nothing an older
- * build stores exists: no pet in any status, none of its settings or sync
- * records, and no Site Editor customization filed under an old namespace.
+ * A new site records the current schema version instead of running the rail.
+ * It counts as new only when no version is recorded and nothing this plugin
+ * stores exists yet: no pet in any status, and no settings or sync records.
  *
  * Read on the request that would run the rail, and at activation. The latter
  * covers a site set up and filled from WP-CLI, which skips the rail until the
@@ -430,22 +415,61 @@ function petsync_is_new_install(): bool {
 		return false;
 	}
 
-	foreach ( array( 'petsync_settings', 'petsync_last_sync', 'petstablished_sync_settings' ) as $option ) {
+	foreach ( array( 'petsync_settings', 'petsync_last_sync' ) as $option ) {
 		if ( false !== get_option( $option ) ) {
 			return false;
 		}
 	}
 
-	if ( taxonomy_exists( 'wp_theme' ) ) {
-		foreach ( Petsync_Templates::LEGACY_NAMESPACES as $legacy ) {
-			if ( get_term_by( 'name', $legacy, 'wp_theme' ) instanceof WP_Term ) {
-				return false;
-			}
-		}
-	}
-
 	return true;
 }
+
+/**
+ * Whether this site holds data saved by a version older than this build can
+ * upgrade (before 2.2.0), so the migration rail will not touch it.
+ *
+ * A recorded version below PETSYNC_DB_VERSION_MIN, or none at all on a site
+ * that is not new: builds before 1.1.0 recorded no version.
+ */
+function petsync_upgrade_unsupported(): bool {
+	$installed = get_option( 'petsync_db_version' );
+
+	if ( false === $installed ) {
+		return ! petsync_is_new_install();
+	}
+
+	return (int) $installed < PETSYNC_DB_VERSION_MIN;
+}
+
+/**
+ * Tell an administrator when this site's data is too old to upgrade.
+ *
+ * Shown on the Plugins screen and the pet screens only, until the data is
+ * brought up to date by 2.2.0. Nothing else in the plugin depends on it.
+ */
+function petsync_unsupported_upgrade_notice(): void {
+	if ( ! current_user_can( 'activate_plugins' ) ) {
+		return;
+	}
+
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	if ( ! $screen || ! ( 'plugins' === $screen->id || str_contains( (string) $screen->id, 'vcps_pet' ) ) ) {
+		return;
+	}
+
+	if ( ! petsync_upgrade_unsupported() ) {
+		return;
+	}
+
+	printf(
+		'<div class="notice notice-error"><p><strong>%1$s</strong> %2$s <a href="%3$s">%4$s</a></p></div>',
+		esc_html__( 'ShelterKit Pets has not updated the pet data on this site.', 'shelterkit-pets' ),
+		esc_html__( 'It was saved by a version older than 2.2.0, and this version can no longer convert it. Install ShelterKit Pets 2.2.0, open any admin page so it can update the data, then install this version again.', 'shelterkit-pets' ),
+		esc_url( 'https://github.com/jwincek/shelterkit-pets/releases/tag/v2.2.0' ),
+		esc_html__( 'Download 2.2.0', 'shelterkit-pets' )
+	);
+}
+add_action( 'admin_notices', 'petsync_unsupported_upgrade_notice' );
 
 /**
  * Run the migration rail.
@@ -460,23 +484,27 @@ function petsync_is_new_install(): bool {
  * @param array<int,callable>|null $migrations Override the rail. For tests only — the
  *                                       failure path decides whether a botched upgrade
  *                                       retries or is skipped forever, and it cannot be
- *                                       exercised through the shipped migrations, which
- *                                       all succeed. Deliberately a parameter rather than
+ *                                       exercised through the shipped migrations.
+ *                                       An override brings its own starting point,
+ *                                       so PETSYNC_DB_VERSION_MIN does not apply to it.
+ *                                       Deliberately a parameter rather than
  *                                       a filter: a filter would let any plugin inject
  *                                       migrations into this site's schema.
- * @return array{installed:int, target:int, completed:int, ran:int[], failed:?int, new:bool}
+ * @return array{installed:int, target:int, completed:int, ran:int[], failed:?int, new:bool, unsupported:bool}
  *         `new` is true when this was a new install: nothing ran, and the
- *         current version was recorded.
+ *         current version was recorded. `unsupported` is true when the data
+ *         predates PETSYNC_DB_VERSION_MIN: nothing ran, and nothing was recorded.
  */
 function petsync_run_migrations( bool $dry_run = false, ?callable $reporter = null, ?array $migrations = null ): array {
 	$installed = (int) get_option( 'petsync_db_version', 0 );
 	$result    = array(
-		'installed' => $installed,
-		'target'    => PETSYNC_DB_VERSION,
-		'completed' => $installed,
-		'ran'       => array(),
-		'failed'    => null,
-		'new'       => false,
+		'installed'   => $installed,
+		'target'      => PETSYNC_DB_VERSION,
+		'completed'   => $installed,
+		'ran'         => array(),
+		'failed'      => null,
+		'new'         => false,
+		'unsupported' => false,
 	);
 
 	if ( $installed >= PETSYNC_DB_VERSION ) {
@@ -489,6 +517,11 @@ function petsync_run_migrations( bool $dry_run = false, ?callable $reporter = nu
 		}
 		$result['completed'] = PETSYNC_DB_VERSION;
 		$result['new']       = true;
+		return $result;
+	}
+
+	if ( null === $migrations && $installed < PETSYNC_DB_VERSION_MIN ) {
+		$result['unsupported'] = true;
 		return $result;
 	}
 
@@ -579,725 +612,3 @@ function petsync_maybe_upgrade(): void {
 	petsync_run_migrations();
 }
 add_action( 'init', 'petsync_maybe_upgrade', 20 );
-
-/**
- * Migration 1 — legacy petstablished_* option and cron names to the neutral
- * petsync_* names (pre-multi-provider cleanup).
- *
- * Idempotent: returns early unless the old settings exist and the new ones
- * don't, then removes the old rows.
- */
-function petsync_migrate_1_option_names(): void {
-	if ( get_option( 'petsync_settings' ) !== false || get_option( 'petstablished_sync_settings' ) === false ) {
-		return;
-	}
-
-	$map = array(
-		'petstablished_sync_settings'   => 'petsync_settings',
-		'petstablished_last_sync'       => 'petsync_last_sync',
-		'petstablished_last_sync_stats' => 'petsync_last_sync_stats',
-		'petstablished_sync_log'        => 'petsync_sync_log',
-	);
-
-	foreach ( $map as $old => $new ) {
-		$value = get_option( $old, null );
-		if ( null !== $value ) {
-			add_option( $new, $value, '', 'petsync_sync_log' === $new ? false : true );
-			delete_option( $old );
-		}
-	}
-
-	// Move the scheduled sync to the renamed hook.
-	wp_clear_scheduled_hook( 'petstablished_scheduled_sync' );
-	$settings = Petsync_Admin::get_settings();
-	Petsync_Admin::reschedule_cron( (bool) $settings['auto_sync'], $settings['sync_interval'], (string) $settings['public_key'] );
-}
-
-/**
- * Migration 2 — stamp the provider slug onto pets imported before the sync
- * became provider-aware.
- *
- * Those pets carry `_pet_ps_id` but no `_pet_provider`. The sync now matches on
- * the pair, so without this backfill it would fail to recognise them and
- * re-import every pet as a duplicate. Everything imported before this change
- * came from Petstablished, so that is the correct slug for all of them.
- *
- * Scoped to pets that actually carry a `_pet_ps_id`: that meta is the evidence a
- * pet was imported at all. Pets authored by hand in the editor have no provider
- * and must not be labelled with one, or a later sync would treat them as records
- * the API had forgotten.
- *
- * Idempotent: only selects pets missing the key, and no-ops on a fresh install.
- */
-function petsync_migrate_2_provider_meta(): void {
-	$pet_ids = get_posts(
-		array(
-			'post_type'        => 'vcps_pet',
-			'post_status'      => 'any',
-			'numberposts'      => -1,
-			'fields'           => 'ids',
-			'suppress_filters' => false,
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- one-time migration, not a request-path query.
-			'meta_query'       => array(
-				'relation' => 'AND',
-				array(
-					'key'     => '_pet_provider',
-					'compare' => 'NOT EXISTS',
-				),
-				array(
-					'key'     => '_pet_ps_id',
-					'compare' => 'EXISTS',
-				),
-			),
-		)
-	);
-
-	foreach ( $pet_ids as $pet_id ) {
-		update_post_meta( $pet_id, '_pet_provider', Petsync_Sync::PROVIDER );
-	}
-}
-
-/**
- * Migration 3 — give hand-created pets a status so they reach the archive.
- *
- * The listing grid filters on the `available` status term. New pets now get one
- * automatically, but any created before that have none, so they render on their
- * own page and never appear on the archive — silently missing rather than
- * visibly broken.
- *
- * Scoped to pets with no provider. A pet imported from a platform gets its
- * status from the API on the next sync, and guessing on its behalf could
- * contradict the platform. Pets that already carry any status are untouched, so
- * nothing is relabelled.
- */
-function petsync_migrate_3_default_status(): void {
-	$taxonomies = \Petsync\Core\Config::get_item( 'taxonomies', 'taxonomies', array() );
-	$default    = $taxonomies['vcps_pet_status']['default_term'] ?? null;
-
-	if ( ! $default ) {
-		return;
-	}
-
-	$pet_ids = get_posts(
-		array(
-			'post_type'        => 'vcps_pet',
-			'post_status'      => 'any',
-			'numberposts'      => -1,
-			'fields'           => 'ids',
-			'suppress_filters' => false,
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- one-time migration, not a request-path query.
-			'meta_query'       => array(
-				array(
-					'key'     => '_pet_provider',
-					'compare' => 'NOT EXISTS',
-				),
-			),
-		)
-	);
-
-	// Every migration before 9 runs on data still filed under the old taxonomy
-	// names, so this one works on pet_status as it always did. Nothing registers
-	// that name any more, so register it for this run only, flat, the way
-	// uninstall.php does. Using the new name here instead would give every pet
-	// "available" before migration 9 brought its real status across.
-	$legacy = 'pet_status';
-	if ( petsync_legacy_taxonomy_is_taken( $legacy ) ) {
-		return;
-	}
-
-	$registered = taxonomy_exists( $legacy );
-	if ( ! $registered ) {
-		register_taxonomy( $legacy, 'vcps_pet' );
-	}
-
-	// The term's own name, not its slug. wp_set_object_terms() takes a string
-	// as a name, so passing the slug made a term called "available"; where
-	// migration 9 then kept it over the real "Available", every status label
-	// on the site came out lowercase.
-	$name = $default;
-	foreach ( $taxonomies['vcps_pet_status']['default_terms'] ?? array() as $term ) {
-		if ( ( $term['slug'] ?? null ) === $default ) {
-			$name = (string) ( $term['name'] ?? $default );
-		}
-	}
-
-	try {
-		foreach ( $pet_ids as $pet_id ) {
-			// A pet with a status under the new name was made by 2.0 or later and
-			// needs nothing. The rail can run after such pets exist: on a site set
-			// up and filled from WP-CLI, which skips the rail until the first page
-			// load. Giving each of them "available" under the old name made
-			// migration 9 merge that term over the real one, deleting "Available"
-			// and marking every pet available, adopted ones included (#145).
-			$current = wp_get_object_terms( $pet_id, 'vcps_pet_status', array( 'fields' => 'ids' ) );
-			if ( is_wp_error( $current ) || ! empty( $current ) ) {
-				continue;
-			}
-
-			$existing = wp_get_object_terms( $pet_id, $legacy, array( 'fields' => 'ids' ) );
-
-			if ( is_wp_error( $existing ) || ! empty( $existing ) ) {
-				continue;
-			}
-
-			$term = term_exists( $default, $legacy );
-			if ( ! $term ) {
-				$term = wp_insert_term( $name, $legacy, array( 'slug' => $default ) );
-			}
-			if ( is_wp_error( $term ) ) {
-				continue;
-			}
-
-			wp_set_object_terms( $pet_id, (int) $term['term_id'], $legacy );
-		}
-	} finally {
-		if ( ! $registered ) {
-			unregister_taxonomy( $legacy );
-		}
-	}
-}
-
-/**
- * Migration 4 — carry Site Editor customizations across the plugin's renames.
- *
- * The Site Editor stores a customized plugin template as a wp_template or
- * wp_template_part post filed under a `wp_theme` term named after the PLUGIN,
- * not the active theme. That term name is a storage key, so each time this
- * plugin was renamed the lookup started asking for a name nothing was filed
- * under. The customizations were never deleted — they became unreachable, and
- * the front end quietly fell back to the bundled template file. Silent, and it
- * reads as "the design reverted" rather than as an error.
- *
- * This happened across the renames vcpahumane-pet-sync -> shelter-pet-sync ->
- * shelter-pets, with no migration to carry the term along. An install can be
- * upgrading across several at once, so every legacy name is checked, oldest
- * first. The move to shelterkit-pets is handled the same way, by migration 5.
- *
- * Two paths, because a term name is unique within the taxonomy:
- *
- *   - No current term yet: rename the legacy one in place. Cheapest, and it
- *     preserves every object relationship untouched.
- *   - A current term already exists: move the posts onto it and drop the empty
- *     legacy term. This is the partially-migrated case — someone customized a
- *     template after the rename, so both terms hold real work and neither can
- *     simply be discarded.
- *
- * Idempotent: the legacy term is gone afterwards, so a second run finds nothing.
- */
-function petsync_migrate_4_template_namespace(): bool {
-	if ( ! taxonomy_exists( 'wp_theme' ) ) {
-		// Nothing this migration can act on, which is a completed no-op rather
-		// than a failure — wp_theme is core and always registered in practice.
-		return true;
-	}
-
-	foreach ( Petsync_Templates::LEGACY_NAMESPACES as $legacy ) {
-		$legacy_term = get_term_by( 'name', $legacy, 'wp_theme' );
-
-		if ( ! $legacy_term instanceof WP_Term ) {
-			continue;
-		}
-
-		$current = get_term_by( 'name', Petsync_Templates::THEME_NAMESPACE, 'wp_theme' );
-
-		if ( ! $current instanceof WP_Term ) {
-			$renamed = wp_update_term(
-				$legacy_term->term_id,
-				'wp_theme',
-				array(
-					'name' => Petsync_Templates::THEME_NAMESPACE,
-					'slug' => Petsync_Templates::THEME_NAMESPACE,
-				)
-			);
-
-			// A slug collision is the realistic failure here: some other
-			// wp_theme term already holds this slug under a different name, so
-			// get_term_by( 'name', … ) above found nothing but wp_update_term
-			// still returns duplicate_term_slug.
-			//
-			// The slug is cosmetic. get_customized_template() matches on
-			// 'field' => 'name', so retry with the name alone and let
-			// WordPress derive a unique slug.
-			if ( is_wp_error( $renamed ) ) {
-				$renamed = wp_update_term(
-					$legacy_term->term_id,
-					'wp_theme',
-					array( 'name' => Petsync_Templates::THEME_NAMESPACE )
-				);
-			}
-
-			// Still no. Report failure rather than leaving the install marked
-			// as migrated: the customizations are intact but unreachable, and
-			// the only way they are ever found again is if this runs later.
-			if ( is_wp_error( $renamed ) ) {
-				return false;
-			}
-
-			continue;
-		}
-
-		// Everything filed under a term named after this plugin belongs to this
-		// plugin, including customizations of templates no longer shipped —
-		// which are exactly the ones a shelter would be upset to lose. Move the
-		// term's whole contents rather than filtering to current slugs.
-		$orphaned = get_posts(
-			array(
-				'post_type'        => array( 'wp_template', 'wp_template_part' ),
-				'post_status'      => 'any',
-				'numberposts'      => -1,
-				'fields'           => 'ids',
-				'suppress_filters' => false,
-				'tax_query'        => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- one-time migration, not a request-path query.
-					array(
-						'taxonomy'         => 'wp_theme',
-						'field'            => 'term_id',
-						'terms'            => $legacy_term->term_id,
-						'include_children' => false,
-					),
-				),
-			)
-		);
-
-		foreach ( $orphaned as $post_id ) {
-			wp_set_object_terms( $post_id, array( $current->term_id ), 'wp_theme', false );
-		}
-
-		wp_delete_term( $legacy_term->term_id, 'wp_theme' );
-	}
-
-	return true;
-}
-
-/**
- * Migration 6 — carry hand-entered meta across two canonical field renames.
- *
- * A canonical field name IS its meta key (`_pet_<field>`), so renaming one
- * orphans whatever a shelter typed by hand. For synced pets the value comes
- * back from the API snapshot on the next sync; for manual pets that meta is the
- * only copy there is.
- *
- *   _pet_siblings_names -> _pet_bonded_names
- *       `siblings_names` was Petstablished's word. Neither other surveyed
- *       provider has the concept, and no shelter would say "sibling names".
- *
- *   _pet_special_needs  -> _pet_has_special_needs
- *       Ours collided in spelling with the provider's `special_needs`, which
- *       maps to our `special_needs_detail`. The same word meant different
- *       things on either side of the boundary.
- *
- * Note `special_needs_detail` is deliberately NOT touched.
- *
- * Never overwrites: if the new key already holds a value the old row is left
- * alone rather than clobbering newer data with older. Idempotent, because the
- * old key is deleted once carried.
- *
- * @return bool True when every rename completed.
- */
-function petsync_migrate_6_field_renames(): bool {
-	$config = \Petsync\Core\Config::get_path( 'entities', 'entities.vcps_pet', array() );
-	$prefix = $config['meta_prefix'] ?? '_pet_';
-
-	$renames = array(
-		'siblings_names' => 'bonded_names',
-		'special_needs'  => 'has_special_needs',
-	);
-
-	foreach ( $renames as $old => $new ) {
-		$old_key = $prefix . $old;
-		$new_key = $prefix . $new;
-
-		$pet_ids = get_posts(
-			array(
-				'post_type'        => 'vcps_pet',
-				'post_status'      => 'any',
-				'numberposts'      => -1,
-				'fields'           => 'ids',
-				'suppress_filters' => false,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- one-time migration, not a request-path query.
-				'meta_query'       => array(
-					array(
-						'key'     => $old_key,
-						'compare' => 'EXISTS',
-					),
-				),
-			)
-		);
-
-		foreach ( $pet_ids as $pet_id ) {
-			$value = get_post_meta( $pet_id, $old_key, true );
-
-			if ( '' === $value || null === $value || false === $value ) {
-				delete_post_meta( $pet_id, $old_key );
-				continue;
-			}
-
-			$existing = get_post_meta( $pet_id, $new_key, true );
-
-			if ( '' === $existing || null === $existing || false === $existing ) {
-				update_post_meta( $pet_id, $new_key, $value );
-			}
-
-			delete_post_meta( $pet_id, $old_key );
-		}
-	}
-
-	return true;
-}
-
-/**
- * Migration 7 — backfill vcps_pet_attribute terms for pets that already exist.
- *
- * The terms are now derived from the hydrated entity on every save, but that
- * only helps pets saved after the change. A hand-entered pet whose
- * compatibility was filled in earlier carries the field and not the term, so it
- * stays invisible to the archive's compatibility filter — which queries the
- * taxonomy, not the meta — while its own page advertises the opposite.
- *
- * Manual pets would never be repaired otherwise, because nothing re-saves
- * them. This once said synced pets would be repaired by the next sync. They
- * were not: a sync skips a pet whose data has not changed, and until #125 it
- * derived the terms before storing the data they come from. Migration 10 runs
- * this backfill again for that reason.
- *
- * @return bool True when the backfill completed.
- */
-function petsync_migrate_7_backfill_attribute_terms(): bool {
-	$pet_ids = get_posts(
-		array(
-			'post_type'        => 'vcps_pet',
-			'post_status'      => 'any',
-			'numberposts'      => -1,
-			'fields'           => 'ids',
-			'suppress_filters' => false,
-		)
-	);
-
-	foreach ( $pet_ids as $pet_id ) {
-		\Petsync\Core\CPT_Registry::sync_attribute_terms( $pet_id );
-	}
-
-	return true;
-}
-
-/**
- * Migration 11 — keep syncing cats and dogs where a sync already ran.
- *
- * The sync asked Petstablished for cats and dogs only, hard-coded. It now asks
- * for every species unless the sync_species setting names some. A site that
- * has been syncing keeps exactly what it had, so no new animals appear on it
- * until someone chooses so; clearing the setting syncs everything. A site
- * with no key has never synced, and starts with every species, as a new
- * install does.
- *
- * @return bool True when done.
- */
-function petsync_migrate_11_sync_species(): bool {
-	$settings = get_option( 'petsync_settings', array() );
-
-	if ( ! is_array( $settings ) || array_key_exists( 'sync_species', $settings ) || '' === (string) ( $settings['public_key'] ?? '' ) ) {
-		return true;
-	}
-
-	$settings['sync_species'] = array( 'Cat', 'Dog' );
-	update_option( 'petsync_settings', $settings );
-
-	return true;
-}
-
-/**
- * Migration 12 — record which pets the site has shown.
- *
- * check-adoptions tells anyone whether a pet was adopted, and should say so
- * only of a pet the site once published. Pet_Visibility::remember_listed() has
- * recorded that since this version. For older pets the evidence is the GMT
- * date: WordPress leaves it unset on a draft that was never published, and
- * keeps it when a published pet goes back to draft. A published pet is shown
- * now, and has one too.
- *
- * Scheduled pets have a GMT date without ever having been shown, so they are
- * left out, as are private and trashed pets, which a pet can be from the
- * start. A draft someone gave a date by hand counts as shown, the one case
- * this over-reports.
- *
- * @return bool True when done.
- */
-function petsync_migrate_12_first_listed(): bool {
-	global $wpdb;
-
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
-	$pets = $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT p.ID, p.post_date_gmt FROM {$wpdb->posts} p
-			 LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
-			 WHERE p.post_type = 'vcps_pet'
-			   AND p.post_status IN ( 'publish', 'draft', 'pending' )
-			   AND p.post_date_gmt <> '0000-00-00 00:00:00'
-			   AND m.meta_id IS NULL",
-			\Petsync\Core\Pet_Visibility::LISTED_META
-		)
-	);
-
-	foreach ( $pets as $pet ) {
-		add_post_meta( (int) $pet->ID, \Petsync\Core\Pet_Visibility::LISTED_META, (int) strtotime( $pet->post_date_gmt . ' UTC' ), true );
-	}
-
-	return true;
-}
-
-/**
- * Migration 8 — seed _pet_last_seen for pets that predate the field.
- *
- * Without this the staleness notice fires on the first admin page load after an
- * upgrade and claims the entire catalogue is out of date, because every synced
- * pet has no timestamp. Seeded from the last recorded sync, falling back to now
- * — either way the clock starts from a defensible point rather than from 1970.
- *
- * Only provider pets: a hand-entered pet is never "seen" by a provider and must
- * never be counted stale.
- *
- * @return bool True when the backfill completed.
- */
-function petsync_migrate_8_seed_last_seen(): bool {
-	$seed = (int) get_option( 'petsync_last_sync', 0 );
-	if ( $seed < 1 ) {
-		$seed = time();
-	}
-
-	$pet_ids = get_posts(
-		array(
-			'post_type'        => 'vcps_pet',
-			'post_status'      => 'any',
-			'numberposts'      => -1,
-			'fields'           => 'ids',
-			'suppress_filters' => false,
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- one-time migration, not a request-path query.
-			'meta_query'       => array(
-				'relation' => 'AND',
-				array(
-					'key'     => '_pet_provider',
-					'compare' => 'EXISTS',
-				),
-				array(
-					'key'     => '_pet_last_seen',
-					'compare' => 'NOT EXISTS',
-				),
-			),
-		)
-	);
-
-	foreach ( $pet_ids as $pet_id ) {
-		update_post_meta( $pet_id, '_pet_last_seen', (string) $seed );
-	}
-
-	return true;
-}
-
-/**
- * The taxonomy names before migration 9, and what each became.
- *
- * Migration 9 reads it; uninstall.php repeats the old names, because the plugin
- * is not loaded during uninstall, and validator check 16 holds the two
- * together.
- *
- * @return array<string, string> Old taxonomy name => new taxonomy name.
- */
-function petsync_taxonomy_renames(): array {
-	return array(
-		'pet_status'    => 'vcps_pet_status',
-		'pet_animal'    => 'vcps_pet_animal',
-		'pet_breed'     => 'vcps_pet_breed',
-		'pet_age'       => 'vcps_pet_age',
-		'pet_sex'       => 'vcps_pet_sex',
-		'pet_size'      => 'vcps_pet_size',
-		'pet_color'     => 'vcps_pet_color',
-		'pet_coat'      => 'vcps_pet_coat',
-		'pet_attribute' => 'vcps_pet_attribute',
-	);
-}
-
-/**
- * Whether another plugin has registered one of the names before migration 9.
- *
- * Nothing in this plugin registers those names any more, except migration 3
- * for its own run. So a name registered for some other post type belongs to
- * someone else on this site, and its terms are not ours to rename or fill.
- *
- * @param string $name A key of petsync_taxonomy_renames().
- */
-function petsync_legacy_taxonomy_is_taken( string $name ): bool {
-	return taxonomy_exists( $name ) && ! is_object_in_taxonomy( 'vcps_pet', $name );
-}
-
-/**
- * Migration 9 — give the taxonomies the post type's vcps_ prefix.
- *
- * pet_* was a three-letter dictionary-word prefix that another pet plugin could
- * register too, and taxonomy names share one registry per site. Renaming before
- * the plugin is listed is the cheap moment; afterwards every install's menus,
- * templates and custom code would carry the old names.
- *
- * Raw SQL, because the old names are no longer registered and the term API
- * refuses unregistered taxonomies. It runs at init 20, after registration at
- * init 10 has already created the default and attribute terms under the new
- * names on this very request, so it merges those into the old terms (which
- * carry the pets) rather than renaming around them.
- *
- * Public names do not change: each taxonomy keeps its old name as its rewrite
- * slug and as its REST base (see the note in config/taxonomies.json).
- *
- * An old name that another plugin registers is skipped, terms, menus and block
- * markup alike: on that site the name is the other plugin's.
- *
- * @return bool False if the rename failed, so the rail retries it.
- */
-function petsync_migrate_9_taxonomy_prefix(): bool {
-	global $wpdb;
-
-	$config  = \Petsync\Core\Config::get_item( 'taxonomies', 'taxonomies', array() );
-	$merged  = array();
-	$renames = array_filter(
-		petsync_taxonomy_renames(),
-		static fn( string $old ): bool => ! petsync_legacy_taxonomy_is_taken( $old ),
-		ARRAY_FILTER_USE_KEY
-	);
-
-	foreach ( $renames as $old => $new ) {
-		// Terms the new taxonomy already holds under a slug the old one also has.
-		// Keep the old term, which carries the pets; move anything attached to the
-		// new one across first. INSERT IGNORE leaves one row where an object was
-		// already on both.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration across unregistered taxonomies.
-		$collisions = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT nt.term_taxonomy_id AS new_tt, nt.term_id AS new_term, ot.term_taxonomy_id AS old_tt
-				 FROM {$wpdb->term_taxonomy} nt
-				 JOIN {$wpdb->terms} n ON n.term_id = nt.term_id
-				 JOIN {$wpdb->terms} o ON o.slug = n.slug
-				 JOIN {$wpdb->term_taxonomy} ot ON ot.term_id = o.term_id AND ot.taxonomy = %s
-				 WHERE nt.taxonomy = %s",
-				$old,
-				$new
-			)
-		);
-
-		foreach ( $collisions as $collision ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
-			$wpdb->query(
-				$wpdb->prepare(
-					"INSERT IGNORE INTO {$wpdb->term_relationships} (object_id, term_taxonomy_id, term_order)
-					 SELECT object_id, %d, term_order FROM {$wpdb->term_relationships} WHERE term_taxonomy_id = %d",
-					$collision->old_tt,
-					$collision->new_tt
-				)
-			);
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
-			$wpdb->delete( $wpdb->term_relationships, array( 'term_taxonomy_id' => (int) $collision->new_tt ) );
-			$wpdb->delete( $wpdb->term_taxonomy, array( 'term_taxonomy_id' => (int) $collision->new_tt ) );
-			$wpdb->delete( $wpdb->termmeta, array( 'term_id' => (int) $collision->new_term ) );
-			$wpdb->delete( $wpdb->terms, array( 'term_id' => (int) $collision->new_term ) );
-			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			wp_cache_delete( (int) $collision->new_term, 'terms' );
-			$merged[ $new ][] = (int) $collision->old_tt;
-		}
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
-		if ( false === $wpdb->update( $wpdb->term_taxonomy, array( 'taxonomy' => $new ), array( 'taxonomy' => $old ) ) ) {
-			return false;
-		}
-
-		// Core keeps these per taxonomy. Point the default term at the surviving
-		// term with the configured slug; registration had pointed it at the
-		// duplicate just deleted.
-		delete_option( 'default_term_' . $old );
-		delete_option( $old . '_children' );
-		$default_slug = $config[ $new ]['default_term'] ?? null;
-		if ( $default_slug ) {
-			$term = get_term_by( 'slug', $default_slug, $new );
-			if ( $term ) {
-				update_option( 'default_term_' . $new, (int) $term->term_id );
-			}
-		}
-
-		// Menu items that link to a term record its taxonomy.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- one-time migration.
-		$menu_items = $wpdb->get_col( $wpdb->prepare( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_menu_item_object' AND meta_value = %s", $old ) );
-		$wpdb->update(
-			$wpdb->postmeta,
-			array( 'meta_value' => $new ),
-			array(
-				'meta_key'   => '_menu_item_object',
-				'meta_value' => $old,
-			)
-		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-		foreach ( $menu_items as $menu_item ) {
-			wp_cache_delete( (int) $menu_item, 'post_meta' );
-		}
-	}
-
-	petsync_migrate_9_block_markup( array_keys( $renames ) );
-
-	// The SQL above went round the object cache, which may still hold term
-	// objects naming the old taxonomy, and relationship caches for the new names
-	// filled earlier on this request, before the rename, as empty. A site with a
-	// persistent cache would otherwise show pets with no status until those
-	// expired.
-	foreach ( $renames as $new ) {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
-		$term_ids = $wpdb->get_col( $wpdb->prepare( "SELECT term_id FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s", $new ) );
-		clean_term_cache( array_map( 'intval', $term_ids ), $new );
-		if ( ! empty( $merged[ $new ] ) ) {
-			wp_update_term_count_now( $merged[ $new ], $new );
-		}
-	}
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
-	$pet_ids = $wpdb->get_col( "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'vcps_pet'" );
-	clean_object_term_cache( array_map( 'intval', $pet_ids ), 'vcps_pet' );
-
-	// Rewrite rules map each slug to its query var, and the query vars changed.
-	flush_rewrite_rules( false );
-
-	return true;
-}
-
-/**
- * Migration 9's rewrite of saved block markup.
- *
- * Core blocks name a taxonomy in their attributes: core/post-terms as "term",
- * core/query as a "taxQuery" key. Only the attribute JSON inside block
- * delimiters is touched, so prose that happens to mention a name is left alone.
- *
- * @param string[] $old_names The old names being renamed on this site.
- */
-function petsync_migrate_9_block_markup( array $old_names ): void {
-	global $wpdb;
-
-	if ( ! $old_names ) {
-		return;
-	}
-
-	$names = implode( '|', array_map( 'preg_quote', $old_names ) );
-
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration.
-	$posts = $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT ID, post_content FROM {$wpdb->posts} WHERE post_type <> 'revision' AND post_content LIKE %s AND post_content LIKE %s",
-			'%' . $wpdb->esc_like( '<!-- wp:' ) . '%',
-			'%' . $wpdb->esc_like( '"pet_' ) . '%'
-		)
-	);
-
-	foreach ( $posts as $post ) {
-		$content = preg_replace_callback(
-			'/<!-- wp:.*?-->/s',
-			static fn( array $block ): string => (string) preg_replace( '/"(' . $names . ')"/', '"vcps_$1"', $block[0] ),
-			$post->post_content
-		);
-
-		if ( null !== $content && $content !== $post->post_content ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration; no revision for a data repair.
-			$wpdb->update( $wpdb->posts, array( 'post_content' => $content ), array( 'ID' => (int) $post->ID ) );
-			clean_post_cache( (int) $post->ID );
-		}
-	}
-}

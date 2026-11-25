@@ -37,7 +37,6 @@ assets-src
 # there would ship all of it if this were narrower.
 vendor
 bin
-migration-scripts
 README.md
 CHANGELOG.md
 # Contributor and maintainer documentation. Nothing here is for a site.
