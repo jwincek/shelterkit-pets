@@ -12,7 +12,7 @@
  * made messages invisible whenever the bar itself was hidden.
  *
  * @package ShelterKit_Pets
- * @since 1.1.0
+ * @since 1.0.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

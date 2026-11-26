@@ -10,7 +10,7 @@
  * bindings update reactively when comparison state changes.
  *
  * @package
- * @since 4.2.0
+ * @since 1.0.0
  */
 
 import { store, getContext } from '@wordpress/interactivity';

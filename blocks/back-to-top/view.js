@@ -5,7 +5,7 @@
  * Uses a passive scroll listener for performance.
  *
  * @package ShelterKit_Pets
- * @since 4.3.0
+ * @since 1.0.0
  */
 
 import { store, getContext } from '@wordpress/interactivity';

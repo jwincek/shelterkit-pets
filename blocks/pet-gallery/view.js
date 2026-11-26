@@ -6,7 +6,7 @@
  * the petsync/gallery namespace with the Interactivity API.
  *
  * @package ShelterKit_Pets
- * @since 3.0.0
+ * @since 1.0.0
  */
 
 // Import the gallery store — this registers it with the Interactivity API.

@@ -5,7 +5,7 @@
  * Imports the comparison store to register it with the Interactivity API.
  *
  * @package ShelterKit_Pets
- * @since 4.3.0
+ * @since 1.0.0
  */
 
 import { state, actions, callbacks } from '../../assets/js/interactivity/comparison.js';

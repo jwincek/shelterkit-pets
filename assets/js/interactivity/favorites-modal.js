@@ -11,7 +11,7 @@
  * unfavorite clicks and bonded pair popover toggles.
  *
  * @package
- * @since 4.3.0
+ * @since 1.0.0
  */
 
 import { store, getContext, getElement } from '@wordpress/interactivity';
