@@ -4,7 +4,7 @@ Tags: pets, adoption, animal shelter, rescue, animals
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 2.2.0
+Stable tag: 3.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,6 +183,12 @@ Pet photos are kept either way. They are ordinary Media Library items and may be
 
 == Changelog ==
 
+= 3.0.0 =
+* Removed: updating straight from a version before 2.2.0. Install 2.2.0 first and open any admin page, then update to 3.0.0. A site that skips that step keeps its pet data as it was, and administrators see a notice saying what to do.
+* Fixed: on WordPress 7.2, the favorites window opened empty.
+* Fixed: the "Continue viewing" link on the comparison page could be made to point at another site. It now goes only to one of your published pets. Comparison links shared before this version still open, without that link.
+* Fixed: a PDF adoption application kept off the server, as with offloaded media, no longer shows an empty "()" where its size goes.
+
 = 2.2.0 =
 * Fixed: on a site where another plugin uses a `pet_*` taxonomy, such as `pet_breed`, installing this plugin could move that plugin's terms into its own. A new install now runs no upgrade steps, and deleting the plugin leaves other plugins' taxonomies alone.
 * Changed: when another site asks whether a pet was adopted, it gets an answer only for pets your site has published at some point.
@@ -278,6 +284,9 @@ Pet photos are kept either way. They are ordinary Media Library items and may be
 * Built on the WordPress Abilities API and Block Bindings.
 
 == Upgrade Notice ==
+
+= 3.0.0 =
+Updating from a version before 2.2.0? Install 2.2.0 first and open any admin page, as 3.0.0 cannot convert older data. Also fixes the favorites window opening empty on WordPress 7.2, so install this before updating WordPress.
 
 = 2.2.0 =
 Fixes a new install taking over another plugin's pet_* taxonomies. Other sites now hear whether a pet was adopted only for pets you have published. WP-CLI: export no longer takes --file; redirect its output instead.

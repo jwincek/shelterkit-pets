@@ -1,6 +1,6 @@
 {
 	"name": "shelterkit-pets",
-	"version": "2.2.0",
+	"version": "3.0.0",
 	"description": "Adoptable pet listings and printable kennel cards for animal shelters, with optional sync from Petstablished.",
 	"private": true,
 	"scripts": {
