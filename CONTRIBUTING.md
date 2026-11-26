@@ -212,6 +212,11 @@ live in `assets/css/kennel-cards.css`, which reaches every site.
   both.
 - **No inline `<script>` or `<style>`.** Enqueue a file, or pass values as
   custom properties on a block's wrapper.
+- **`@since` names the release of this plugin that first shipped the thing.**
+  Code written before 1.0.0 says 1.0.0. The code it started from had its own
+  version numbers, which reached 4.3.0, so a number copied from there is
+  wrong. The shared ShelterKit files are the exception: they count the profile
+  class's own versions.
 
 ## Screenshots
 

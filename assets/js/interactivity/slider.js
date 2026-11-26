@@ -4,7 +4,7 @@
  * v3.0.0: generators for async pet actions, imports from store.js
  *
  * @package
- * @since 3.0.0
+ * @since 1.0.0
  */
 
 import { store, getContext, getElement } from '@wordpress/interactivity';

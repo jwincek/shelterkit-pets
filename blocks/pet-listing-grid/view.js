@@ -5,7 +5,7 @@
  * Imports and re-exports from the shared grid module.
  *
  * @package ShelterKit_Pets
- * @since 2.1.0
+ * @since 1.0.0
  */
 
 // Import the grid store - this registers it with the Interactivity API

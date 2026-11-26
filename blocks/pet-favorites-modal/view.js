@@ -2,7 +2,7 @@
  * Pet Favorites Modal Block - View Script Module
  *
  * @package ShelterKit_Pets
- * @since 4.2.0
+ * @since 1.0.0
  */
 
 import { state, actions, callbacks } from '../../assets/js/interactivity/favorites-modal.js';

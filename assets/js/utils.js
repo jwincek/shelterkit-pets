@@ -6,7 +6,7 @@
  * of importing the entire global store.
  *
  * @package
- * @since 3.0.0
+ * @since 1.0.0
  */
 
 import { getConfig } from '@wordpress/interactivity';

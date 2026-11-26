@@ -8,7 +8,7 @@
  * composition controls which sections appear. Breadcrumb added to templates.
  *
  * @package ShelterKit_Pets
- * @since 3.0.0
+ * @since 1.0.0
  */
 
 ( function() {

@@ -7,7 +7,7 @@
  * into the root store.
  *
  * @package
- * @since 4.3.0
+ * @since 1.0.0
  */
 
 import { store, getContext } from '@wordpress/interactivity';

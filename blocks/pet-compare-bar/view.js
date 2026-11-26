@@ -5,7 +5,7 @@
  * Imports and re-exports from the shared compare-bar module.
  *
  * @package ShelterKit_Pets
- * @since 2.1.0
+ * @since 1.0.0
  */
 
 // Import the compare-bar store - this registers it with the Interactivity API

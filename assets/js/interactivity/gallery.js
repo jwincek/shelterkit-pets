@@ -13,7 +13,7 @@
  * document-level listeners.
  *
  * @package
- * @since 3.0.0
+ * @since 1.0.0
  */
 
 import { store, getContext, getElement } from '@wordpress/interactivity';

@@ -256,7 +256,7 @@ final class Photo_Queue {
 		/**
 		 * Pets whose photos one queue run downloads.
 		 *
-		 * @since 1.7.0
+		 * @since 2.0.0
 		 *
 		 * @param int $batch Pets per run.
 		 */

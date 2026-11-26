@@ -9,7 +9,7 @@
  * - Improved search highlighting via data-wp-watch + rAF
  *
  * @package
- * @since 3.0.0
+ * @since 1.0.0
  */
 
 import {

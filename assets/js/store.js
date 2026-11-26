@@ -15,7 +15,7 @@
  * Router-based navigation for comparison actions.
  *
  * @package
- * @since 4.2.0
+ * @since 1.0.0
  */
 
 import {
