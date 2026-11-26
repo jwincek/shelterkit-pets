@@ -211,10 +211,16 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				</div>
 
 				<!-- Pet cards grid (imperatively managed by callbacks.syncCards) -->
+				<?php
+				// Two watches on one element, told apart by unique IDs after three
+				// hyphens. WordPress 6.9 deprecated the two-hyphen form, and 7.2
+				// reads it as a suffix, which watch does not take, and skips it:
+				// on 7.2 the modal's grid would never update. Validator check 17.
+				?>
 				<div
 					class="pet-favorites-modal__grid"
-					data-wp-watch--grid="callbacks.syncGridVisibility"
-					data-wp-watch--cards="callbacks.syncCards"
+					data-wp-watch---grid="callbacks.syncGridVisibility"
+					data-wp-watch---cards="callbacks.syncCards"
 					<?php echo $fav_count === 0 ? 'hidden' : ''; ?>
 				>
 					<?php

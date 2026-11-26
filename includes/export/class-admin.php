@@ -186,7 +186,12 @@ class Admin {
 		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
 		header( 'Content-Length: ' . strlen( $body ) );
 
-		echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- a CSV/JSON file body, not HTML; cells are escaped by Exporter::esc_csv_field().
+		// A file download, not a page: the headers above make the browser save
+		// it. HTML escaping would corrupt the data (an & in a pet's name would
+		// arrive as &amp;). It is escaped for its own format instead: CSV cells
+		// by Exporter::esc_csv_field(), against spreadsheet formulas, and JSON
+		// by wp_json_encode().
+		echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- a CSV or JSON file; see above.
 		exit;
 	}
 }

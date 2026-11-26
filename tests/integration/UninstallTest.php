@@ -55,11 +55,9 @@ final class UninstallTest extends PetTestCase {
 		$user = self::factory()->user->create();
 		update_user_meta( $user, '_pet_favorites', array( $manual ) );
 
-		// Customised kennel cards, under the current namespace and a legacy one
-		// that migration 4 would normally have consolidated.
+		// A customised kennel card.
 		$parts = array(
 			$this->make_customised_part( \Petsync_Templates::THEME_NAMESPACE ),
-			$this->make_customised_part( 'petstablished-sync' ),
 		);
 
 		// Read while nothing is registered: re-registering vcps_pet_status afterwards
@@ -81,7 +79,7 @@ final class UninstallTest extends PetTestCase {
 		$this->assertSame( '', get_user_meta( $user, '_pet_favorites', true ) );
 
 		foreach ( $parts as $part ) {
-			$this->assertNull( get_post( $part ), 'Site Editor customisations go, legacy namespace included' );
+			$this->assertNull( get_post( $part ), 'Site Editor customisations go' );
 		}
 		$this->assertFalse( get_term_by( 'name', \Petsync_Templates::THEME_NAMESPACE, 'wp_theme' ) );
 
@@ -122,11 +120,11 @@ final class UninstallTest extends PetTestCase {
 	}
 
 	/**
-	 * The names before migration 9 are this plugin's only where that migration
-	 * never ran. Anywhere else a pet_* taxonomy is another plugin's, active or
-	 * not, and deleting this plugin must leave its terms.
+	 * The pet taxonomies were named pet_* before 2.0. On any site this version
+	 * runs on, a pet_* taxonomy is another plugin's, active or not, and
+	 * deleting this plugin must leave its terms.
 	 */
-	public function test_old_names_are_emptied_only_where_they_are_still_ours(): void {
+	public function test_another_plugins_pet_taxonomy_keeps_its_terms(): void {
 		$this->opt_in( true );
 
 		// An inactive plugin's: nothing registers it during the uninstall.
@@ -140,31 +138,18 @@ final class UninstallTest extends PetTestCase {
 		$this->assertSame( 1, $this->rows( 'pet_breed' ), "another plugin's terms stay" );
 	}
 
-	public function test_an_active_plugins_old_name_stays_even_before_migration_9(): void {
+	public function test_an_active_plugins_pet_taxonomy_keeps_its_terms(): void {
 		$this->opt_in( true );
 		register_taxonomy( 'pet_breed', 'post' );
 
 		try {
 			wp_set_object_terms( self::factory()->post->create(), 'their-beagle', 'pet_breed' );
-			update_option( 'petsync_db_version', 8 );
 			$this->run_uninstall();
 
 			$this->assertSame( 1, $this->rows( 'pet_breed' ) );
 		} finally {
 			unregister_taxonomy( 'pet_breed' );
 		}
-	}
-
-	public function test_an_install_deleted_before_migration_9_loses_its_old_terms(): void {
-		$this->opt_in( true );
-		register_taxonomy( 'pet_breed', 'vcps_pet' );
-		wp_insert_term( 'Old Beagle', 'pet_breed' );
-		unregister_taxonomy( 'pet_breed' );
-
-		update_option( 'petsync_db_version', 8 );
-		$this->run_uninstall();
-
-		$this->assertSame( 0, $this->rows( 'pet_breed' ) );
 	}
 
 	private function rows( string $taxonomy ): int {

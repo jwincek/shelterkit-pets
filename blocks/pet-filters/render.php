@@ -31,25 +31,25 @@ $compatibility_collapsed = $attributes['compatibilityCollapsed'] ?? false;
 
 // Get current filter values from URL.
 $current = array(
-	'animal' => sanitize_text_field( wp_unslash( $_GET['animal'] ?? '' ) ),
-	'breed'  => sanitize_text_field( wp_unslash( $_GET['breed'] ?? '' ) ),
-	'age'    => sanitize_text_field( wp_unslash( $_GET['age'] ?? '' ) ),
-	'sex'    => sanitize_text_field( wp_unslash( $_GET['sex'] ?? '' ) ),
-	'size'   => sanitize_text_field( wp_unslash( $_GET['size'] ?? '' ) ),
-	'status' => sanitize_text_field( wp_unslash( $_GET['status'] ?? '' ) ),
+	'animal' => Petsync_Helpers::query_param( 'animal' ),
+	'breed'  => Petsync_Helpers::query_param( 'breed' ),
+	'age'    => Petsync_Helpers::query_param( 'age' ),
+	'sex'    => Petsync_Helpers::query_param( 'sex' ),
+	'size'   => Petsync_Helpers::query_param( 'size' ),
+	'status' => Petsync_Helpers::query_param( 'status' ),
 );
 
 // Compatibility/meta filter values (checkboxes use 'yes' when checked).
 $current_compat = array(
-	'good_with_dogs'  => sanitize_text_field( wp_unslash( $_GET['good_with_dogs'] ?? '' ) ),
-	'good_with_cats'  => sanitize_text_field( wp_unslash( $_GET['good_with_cats'] ?? '' ) ),
-	'good_with_kids'  => sanitize_text_field( wp_unslash( $_GET['good_with_kids'] ?? '' ) ),
-	'shots_current'   => sanitize_text_field( wp_unslash( $_GET['shots_current'] ?? '' ) ),
-	'spayed_neutered' => sanitize_text_field( wp_unslash( $_GET['spayed_neutered'] ?? '' ) ),
-	'housebroken'     => sanitize_text_field( wp_unslash( $_GET['housebroken'] ?? '' ) ),
-	'special_needs'   => sanitize_text_field( wp_unslash( $_GET['special_needs'] ?? '' ) ),
-	'hypoallergenic'  => sanitize_text_field( wp_unslash( $_GET['hypoallergenic'] ?? '' ) ),
-	'declawed'        => sanitize_text_field( wp_unslash( $_GET['declawed'] ?? '' ) ),
+	'good_with_dogs'  => Petsync_Helpers::query_param( 'good_with_dogs' ),
+	'good_with_cats'  => Petsync_Helpers::query_param( 'good_with_cats' ),
+	'good_with_kids'  => Petsync_Helpers::query_param( 'good_with_kids' ),
+	'shots_current'   => Petsync_Helpers::query_param( 'shots_current' ),
+	'spayed_neutered' => Petsync_Helpers::query_param( 'spayed_neutered' ),
+	'housebroken'     => Petsync_Helpers::query_param( 'housebroken' ),
+	'special_needs'   => Petsync_Helpers::query_param( 'special_needs' ),
+	'hypoallergenic'  => Petsync_Helpers::query_param( 'hypoallergenic' ),
+	'declawed'        => Petsync_Helpers::query_param( 'declawed' ),
 );
 
 $filters = array(

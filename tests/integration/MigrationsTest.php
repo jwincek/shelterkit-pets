@@ -3,9 +3,12 @@
  * The stored-data migration rail.
  *
  * Migrations run once, against real installs, and a mistake is not undoable.
- * Each must be idempotent and correctly scoped — over-reaching is the failure
- * that matters, because relabelling a pet nobody asked to relabel is worse
- * than leaving it alone.
+ * The rail decides what runs and what gets recorded: a new install runs
+ * nothing, data older than the rail can convert is left alone, and a failed
+ * migration is retried rather than skipped.
+ *
+ * 3.0.0 removed migrations 1 to 12 and their tests. Their history is in git
+ * up to tag v2.2.0.
  *
  * @package ShelterKit_Pets
  */
@@ -16,231 +19,33 @@ namespace Petsync\Tests\Integration;
 
 final class MigrationsTest extends PetTestCase {
 
-	public function test_the_rail_runs_every_declared_migration(): void {
-		$migrations = petsync_get_migrations();
+	public function tear_down(): void {
+		unset( $GLOBALS['current_screen'] );
+		parent::tear_down();
+	}
 
-		$this->assertSame( range( 1, PETSYNC_DB_VERSION ), array_keys( $migrations ), 'migrations must be contiguous from 1' );
+	public function test_declared_migrations_run_from_the_floor_to_the_current_version(): void {
+		$migrations = petsync_get_migrations();
+		$expected   = PETSYNC_DB_VERSION > PETSYNC_DB_VERSION_MIN
+			? range( PETSYNC_DB_VERSION_MIN + 1, PETSYNC_DB_VERSION )
+			: array();
+
+		$this->assertSame( $expected, array_keys( $migrations ), 'migrations must be contiguous from the floor to PETSYNC_DB_VERSION' );
 
 		foreach ( $migrations as $version => $callback ) {
 			$this->assertTrue( is_callable( $callback ), "migration {$version} is not callable" );
 		}
 	}
 
-	// ── Migration 2: provider backfill ───────────────────────────────────────
-
-	public function test_migration_2_stamps_pets_that_were_imported(): void {
-		$imported = $this->make_manual_pet();
-		update_post_meta( $imported, $this->prefix . 'ps_id', '4242' );
-
-		petsync_migrate_2_provider_meta();
-
-		$this->assertSame(
-			\Petsync_Sync::PROVIDER,
-			get_post_meta( $imported, $this->prefix . 'provider', true )
-		);
-	}
-
-	/**
-	 * A record ID is the evidence a pet was imported. Without one it was typed
-	 * by hand, and labelling it with a provenance it never had would put it
-	 * inside a sync's reach.
-	 */
-	public function test_migration_2_leaves_hand_entered_pets_alone(): void {
-		$manual = $this->make_manual_pet();
-
-		petsync_migrate_2_provider_meta();
-
-		$this->assertSame( '', get_post_meta( $manual, $this->prefix . 'provider', true ) );
-	}
-
-	public function test_migration_2_is_idempotent(): void {
-		$id = $this->make_manual_pet();
-		update_post_meta( $id, $this->prefix . 'ps_id', '4242' );
-
-		petsync_migrate_2_provider_meta();
-		$first = get_post_meta( $id, $this->prefix . 'provider', true );
-
-		petsync_migrate_2_provider_meta();
-
-		$this->assertSame( $first, get_post_meta( $id, $this->prefix . 'provider', true ) );
-		$this->assertCount( 1, get_post_meta( $id, $this->prefix . 'provider' ), 'must not accumulate duplicate meta rows' );
-	}
-
-	// ── Migration 3: default status backfill ─────────────────────────────────
-	//
-	// Migration 3 predates migration 9, so it works on the status taxonomy's old
-	// name, pet_status, which nothing registers any more. These tests seed data
-	// the way a site from before migration 3 has it: under that name.
-
-	private function register_legacy_status(): void {
-		if ( ! taxonomy_exists( 'pet_status' ) ) {
-			register_taxonomy( 'pet_status', 'vcps_pet' );
-		}
-	}
-
-	/**
-	 * A hand-entered pet as a site from before migration 9 has it: nothing under
-	 * the new status name. Today's code gives a new pet "available" under
-	 * vcps_pet_status the moment it is created, which no pre-rename pet has.
-	 */
-	private function make_legacy_pet(): int {
-		$id = $this->make_manual_pet();
-		wp_set_object_terms( $id, array(), 'vcps_pet_status' );
-		return $id;
-	}
-
-	public function tear_down(): void {
-		if ( taxonomy_exists( 'pet_status' ) ) {
-			unregister_taxonomy( 'pet_status' );
-		}
-		parent::tear_down();
-	}
-
-	/**
-	 * The realistic case: nothing has registered pet_status. The migration has to
-	 * register it for its own run, and must not leave it registered.
-	 */
-	public function test_migration_3_registers_the_old_name_only_for_its_own_run(): void {
-		$this->register_legacy_status();
-		$id = $this->make_legacy_pet();
-		wp_set_object_terms( $id, array(), 'pet_status' );
-		unregister_taxonomy( 'pet_status' );
-
-		petsync_migrate_3_default_status();
-
-		$this->assertFalse( taxonomy_exists( 'pet_status' ), 'the old name must not stay registered' );
-		$this->register_legacy_status();
-		$this->assertSame( array( 'available' ), wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'slugs' ) ) );
-	}
-
-	public function test_migration_3_gives_statusless_hand_entered_pets_a_status(): void {
-		$this->register_legacy_status();
-		$id = $this->make_legacy_pet();
-		wp_set_object_terms( $id, array(), 'pet_status' );
-
-		petsync_migrate_3_default_status();
-
-		$this->assertSame(
-			array( 'available' ),
-			wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'slugs' ) )
-		);
-	}
-
-	public function test_migration_3_never_relabels_a_pet_that_has_a_status(): void {
-		$this->register_legacy_status();
-		$id = $this->make_legacy_pet();
-		wp_set_object_terms( $id, 'adopted', 'pet_status' );
-
-		petsync_migrate_3_default_status();
-
-		$this->assertSame(
-			array( 'adopted' ),
-			wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'slugs' ) ),
-			'an existing status is the shelter’s statement about the animal'
-		);
-	}
-
-	/**
-	 * An imported pet takes its status from the provider on the next sync.
-	 * Guessing on its behalf could contradict the platform.
-	 */
-	public function test_migration_3_skips_imported_pets(): void {
-		$this->register_legacy_status();
-		$id = $this->make_synced_pet();
-		wp_set_object_terms( $id, array(), 'pet_status' );
-
-		petsync_migrate_3_default_status();
-
-		$this->assertSame( array(), wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'slugs' ) ) );
-	}
-
-	/**
-	 * #145. A site set up and filled from WP-CLI runs the rail on its first
-	 * page load, after its pets exist under the new names. Migration 3 took them
-	 * for statusless pre-rename pets and gave each "available" under the old
-	 * name; migration 9 then kept that term and deleted the real one, so an
-	 * adopted pet was marked available too and every label went lowercase.
-	 */
-	public function test_migrations_3_and_9_leave_a_new_pets_status_alone(): void {
-		$adopted   = $this->make_manual_pet( array( 'post_title' => 'Adopted Already' ) );
-		$available = $this->make_manual_pet( array( 'post_title' => 'Still Here' ) );
-		wp_set_object_terms( $adopted, 'adopted', 'vcps_pet_status' );
-		$before = get_term_by( 'slug', 'available', 'vcps_pet_status' );
-
-		petsync_migrate_3_default_status();
-		petsync_migrate_9_taxonomy_prefix();
-		clean_object_term_cache( array( $adopted, $available ), 'vcps_pet' );
-
-		$this->assertSame( array( 'adopted' ), wp_get_object_terms( $adopted, 'vcps_pet_status', array( 'fields' => 'slugs' ) ), 'an adopted pet must not be marked available' );
-		$this->assertSame( array( 'available' ), wp_get_object_terms( $available, 'vcps_pet_status', array( 'fields' => 'slugs' ) ) );
-
-		$after = get_term_by( 'slug', 'available', 'vcps_pet_status' );
-		$this->assertSame( $before->term_id, $after->term_id, 'the Available term must survive, not be replaced' );
-		$this->assertSame( 'Available', $after->name );
-	}
-
-	/**
-	 * Where migration 3 does have to create the default term under the old
-	 * name, it takes the configured name. It used to pass the slug, which
-	 * wp_set_object_terms() treats as a name.
-	 */
-	public function test_migration_3_names_the_default_term_properly(): void {
-		$this->register_legacy_status();
-		$id = $this->make_legacy_pet();
-
-		petsync_migrate_3_default_status();
-		$this->register_legacy_status();
-
-		$this->assertSame( array( 'Available' ), wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'names' ) ) );
-	}
-
-	public function test_migration_3_is_idempotent(): void {
-		$this->register_legacy_status();
-		$id = $this->make_legacy_pet();
-		wp_set_object_terms( $id, array(), 'pet_status' );
-
-		petsync_migrate_3_default_status();
-		petsync_migrate_3_default_status();
-
-		$this->assertSame(
-			array( 'available' ),
-			wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'slugs' ) )
-		);
-	}
-
-	/**
-	 * Another plugin's pet_status is that plugin's. Filling it with "Available"
-	 * would hand our pets to its taxonomy and put a term in its list.
-	 */
-	public function test_migration_3_leaves_another_plugins_pet_status_alone(): void {
-		$id = $this->make_legacy_pet();
-		register_taxonomy( 'pet_status', 'post' );
-
-		petsync_migrate_3_default_status();
-
-		$this->assertSame( array(), wp_get_object_terms( $id, 'pet_status', array( 'fields' => 'ids' ) ) );
-		$this->assertNull( term_exists( 'available', 'pet_status' ) );
-		$this->assertSame( array( 'post' ), get_taxonomy( 'pet_status' )->object_type, 'and its registration stands' );
-	}
-
-	public function test_migrations_no_op_on_a_fresh_install(): void {
-		// No pets at all. A new install runs none of these, but an upgrade from
-		// before the rail with nothing to convert runs all of them.
-		foreach ( petsync_get_migrations() as $version => $callback ) {
-			$callback();
-			$this->assertTrue( true, "migration {$version} completed on an empty install" );
-		}
-	}
-
 	// ── A new install ────────────────────────────────────────────────────────
 	//
-	// The rail converts data from older builds, filed under names this plugin no
-	// longer uses. On a new site those names may be another plugin's.
+	// The rail converts data from older builds. A new site has none, and must
+	// not run a migration written for names that may be another plugin's.
 
 	/**
-	 * A taxonomy with one of the old names, as another pet plugin leaves it. Not
-	 * registered: that plugin may be inactive, and then nothing shows whose the
-	 * terms are.
+	 * A taxonomy with one of the names the pet taxonomies had before 2.0, as
+	 * another pet plugin leaves it. Not registered: that plugin may be
+	 * inactive, and then nothing shows whose the terms are.
 	 *
 	 * @return int Its one term's ID.
 	 */
@@ -260,10 +65,9 @@ final class MigrationsTest extends PetTestCase {
 	}
 
 	/**
-	 * Found by the WordPress.org plugin review, which flagged migration 3's
-	 * pet_status. Worse than that flag: a new install started at version 0 and
-	 * ran every migration, so migration 9 renamed every pet_* taxonomy on the
-	 * site and rewrote the block markup that named one.
+	 * Found by the WordPress.org plugin review in 2.1.0: a new install started
+	 * at version 0 and ran every migration, so the taxonomy rename moved every
+	 * pet_* taxonomy on the site and rewrote the block markup that named one.
 	 */
 	public function test_a_new_install_runs_no_migration(): void {
 		delete_option( 'petsync_db_version' );
@@ -279,6 +83,7 @@ final class MigrationsTest extends PetTestCase {
 		$result = petsync_run_migrations();
 
 		$this->assertTrue( $result['new'] );
+		$this->assertFalse( $result['unsupported'] );
 		$this->assertSame( array(), $result['ran'] );
 		$this->assertSame( PETSYNC_DB_VERSION, (int) get_option( 'petsync_db_version' ) );
 		$this->assertSame( 'pet_breed', $this->taxonomy_of( $term ), "another plugin's terms keep their taxonomy" );
@@ -293,23 +98,21 @@ final class MigrationsTest extends PetTestCase {
 	}
 
 	/**
-	 * Anything an older build stores marks an upgrade, which runs the rail.
+	 * Anything the plugin stores means the site is not new.
 	 *
-	 * @dataProvider older_build_leftovers
+	 * @dataProvider stored_data
 	 *
-	 * @param string $leftover What an older build left.
+	 * @param string $leftover What the site already holds.
 	 */
-	public function test_what_an_older_build_left_marks_an_upgrade( string $leftover ): void {
+	public function test_stored_data_means_the_site_is_not_new( string $leftover ): void {
 		delete_option( 'petsync_db_version' );
 		$this->assertTrue( petsync_is_new_install(), 'nothing is stored yet' );
 
 		match ( $leftover ) {
-			'a pet'                   => $this->make_manual_pet(),
-			'a trashed pet'           => $this->make_manual_pet( array( 'post_status' => 'trash' ) ),
-			'settings'                => update_option( 'petsync_settings', array( 'auto_sync' => false ) ),
-			'settings from before 1.0' => update_option( 'petstablished_sync_settings', array( 'public_key' => 'x' ) ),
-			'a sync'                  => update_option( 'petsync_last_sync', time() ),
-			'an old template'         => $this->customize_template_under( 'petstablished-sync' ),
+			'a pet'         => $this->make_manual_pet(),
+			'a trashed pet' => $this->make_manual_pet( array( 'post_status' => 'trash' ) ),
+			'settings'      => update_option( 'petsync_settings', array( 'auto_sync' => false ) ),
+			'a sync'        => update_option( 'petsync_last_sync', time() ),
 		};
 
 		$this->assertFalse( petsync_is_new_install() );
@@ -319,8 +122,8 @@ final class MigrationsTest extends PetTestCase {
 	/**
 	 * @return array<string, array{string}>
 	 */
-	public static function older_build_leftovers(): array {
-		$leftovers = array( 'a pet', 'a trashed pet', 'settings', 'settings from before 1.0', 'a sync', 'an old template' );
+	public static function stored_data(): array {
+		$leftovers = array( 'a pet', 'a trashed pet', 'settings', 'a sync' );
 
 		return array_combine( $leftovers, array_map( static fn( string $leftover ): array => array( $leftover ), $leftovers ) );
 	}
@@ -345,398 +148,107 @@ final class MigrationsTest extends PetTestCase {
 		wp_clear_scheduled_hook( 'petsync_scheduled_sync' );
 	}
 
-	// ── Migration 12: which pets the site has shown ──────────────────────────
+	// ── Data from before 2.2.0 ───────────────────────────────────────────────
+	//
+	// 3.0.0 removed the migrations that brought it up to version 12. A
+	// migration added later and run on such data would record a version whose
+	// earlier steps never ran, so the rail leaves it alone and says why.
 
-	public function test_migration_12_records_the_pets_the_site_has_shown(): void {
-		$meta      = \Petsync\Core\Pet_Visibility::LISTED_META;
-		$published = $this->make_manual_pet();
-		$was       = $this->make_manual_pet();
-		wp_update_post(
-			array(
-				'ID'          => $was,
-				'post_status' => 'draft',
-			)
-		);
-		$never     = $this->make_manual_pet( array( 'post_status' => 'draft' ) );
-		$scheduled = $this->make_manual_pet(
-			array(
-				'post_status' => 'future',
-				'post_date'   => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ),
-			)
-		);
-		$private   = $this->make_manual_pet( array( 'post_status' => 'private' ) );
+	/**
+	 * @dataProvider versions_below_the_floor
+	 *
+	 * @param int $version A recorded schema version older than 2.2.0's.
+	 */
+	public function test_data_older_than_2_2_0_is_left_alone( int $version ): void {
+		$this->make_manual_pet();
+		update_option( 'petsync_db_version', $version, true );
 
-		// As pets from before 2.2.0 are: with no record.
-		foreach ( array( $published, $was, $never, $scheduled, $private ) as $id ) {
-			delete_post_meta( $id, $meta );
+		$result = petsync_run_migrations();
+
+		$this->assertTrue( $result['unsupported'] );
+		$this->assertSame( array(), $result['ran'] );
+		$this->assertSame( $version, (int) get_option( 'petsync_db_version' ), 'nothing is recorded' );
+		$this->assertTrue( petsync_upgrade_unsupported() );
+	}
+
+	/**
+	 * @return array<string, array{int}>
+	 */
+	public static function versions_below_the_floor(): array {
+		return array(
+			'1.0.0'        => array( 1 ),
+			'1.5.0'        => array( 8 ),
+			'2.1.0'        => array( 11 ),
+			'0, as stored' => array( 0 ),
+		);
+	}
+
+	/**
+	 * Builds before 1.1.0 recorded no version at all.
+	 */
+	public function test_pets_without_a_recorded_version_are_too_old(): void {
+		delete_option( 'petsync_db_version' );
+		$this->make_manual_pet();
+
+		$this->assertTrue( petsync_upgrade_unsupported() );
+		$this->assertTrue( petsync_run_migrations()['unsupported'] );
+		$this->assertFalse( get_option( 'petsync_db_version' ) );
+	}
+
+	public function test_current_and_new_sites_are_not_too_old(): void {
+		update_option( 'petsync_db_version', PETSYNC_DB_VERSION_MIN, true );
+		$this->assertFalse( petsync_upgrade_unsupported() );
+		$this->assertFalse( petsync_run_migrations()['unsupported'] );
+
+		delete_option( 'petsync_db_version' );
+		$this->assertFalse( petsync_upgrade_unsupported(), 'a new install' );
+	}
+
+	/**
+	 * The notice is how an administrator learns why the data was not updated.
+	 */
+	public function test_the_notice_names_2_2_0_where_an_administrator_will_see_it(): void {
+		if ( ! function_exists( 'set_current_screen' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
+			require_once ABSPATH . 'wp-admin/includes/screen.php';
 		}
 
-		$this->assertTrue( petsync_migrate_12_first_listed() );
+		$this->make_manual_pet();
+		update_option( 'petsync_db_version', 11, true );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 
-		$this->assertSame( strtotime( get_post( $published )->post_date_gmt . ' UTC' ), (int) get_post_meta( $published, $meta, true ) );
-		$this->assertNotSame( '', get_post_meta( $was, $meta, true ), 'published, then drafted: WordPress kept its date' );
-		$this->assertSame( '', get_post_meta( $never, $meta, true ), 'a draft never published has no date' );
-		$this->assertSame( '', get_post_meta( $scheduled, $meta, true ), 'scheduled has a date but was never shown' );
-		$this->assertSame( '', get_post_meta( $private, $meta, true ), 'private from the start' );
-	}
+		set_current_screen( 'plugins' );
+		$this->assertStringContainsString( '2.2.0', get_echo( 'petsync_unsupported_upgrade_notice' ) );
 
-	public function test_migration_12_keeps_a_record_and_is_idempotent(): void {
-		$meta = \Petsync\Core\Pet_Visibility::LISTED_META;
-		$id   = $this->make_manual_pet();
-		update_post_meta( $id, $meta, '12345' );
+		set_current_screen( 'edit-vcps_pet' );
+		$this->assertStringContainsString( '2.2.0', get_echo( 'petsync_unsupported_upgrade_notice' ), 'the pet list too' );
 
-		petsync_migrate_12_first_listed();
-		petsync_migrate_12_first_listed();
+		set_current_screen( 'dashboard' );
+		$this->assertSame( '', get_echo( 'petsync_unsupported_upgrade_notice' ), 'not on unrelated screens' );
 
-		$this->assertSame( array( '12345' ), get_post_meta( $id, $meta, false ) );
-	}
+		set_current_screen( 'plugins' );
+		update_option( 'petsync_db_version', PETSYNC_DB_VERSION_MIN, true );
+		$this->assertSame( '', get_echo( 'petsync_unsupported_upgrade_notice' ), 'not once the data is current' );
 
-	// ── Migration 4: template namespace ──────────────────────────────────────
-
-	/**
-	 * File a customized template under a given wp_theme term, the way the Site
-	 * Editor does.
-	 *
-	 * @param string $theme_name wp_theme term name.
-	 * @param string $slug       Template slug.
-	 * @return int Post ID.
-	 */
-	private function customize_template_under( string $theme_name, string $slug = 'single-vcps_pet' ): int {
-		$post_id = wp_insert_post(
-			array(
-				'post_type'    => 'wp_template',
-				'post_name'    => $slug,
-				'post_title'   => $slug,
-				'post_status'  => 'publish',
-				'post_content' => '<!-- wp:paragraph --><p>customized</p><!-- /wp:paragraph -->',
-			)
-		);
-
-		wp_set_object_terms( $post_id, $theme_name, 'wp_theme' );
-
-		return (int) $post_id;
-	}
-
-	/**
-	 * @param int $post_id Template post ID.
-	 * @return string[] wp_theme term names on the post.
-	 */
-	private function theme_terms_of( int $post_id ): array {
-		return wp_get_object_terms( $post_id, 'wp_theme', array( 'fields' => 'names' ) );
-	}
-
-	public function test_migration_4_carries_a_customization_across_a_rename(): void {
-		$customized = $this->customize_template_under( 'shelter-pet-sync' );
-
-		petsync_migrate_4_template_namespace();
-
-		$this->assertSame(
-			array( \Petsync_Templates::THEME_NAMESPACE ),
-			$this->theme_terms_of( $customized ),
-			'a customization filed under the old name must end up under the current one'
-		);
-		$this->assertFalse(
-			get_term_by( 'name', 'shelter-pet-sync', 'wp_theme' ),
-			'the legacy term should not survive'
-		);
-	}
-
-	public function test_migration_4_handles_the_oldest_namespace_too(): void {
-		$customized = $this->customize_template_under( 'vcpahumane-pet-sync' );
-
-		petsync_migrate_4_template_namespace();
-
-		$this->assertSame(
-			array( \Petsync_Templates::THEME_NAMESPACE ),
-			$this->theme_terms_of( $customized )
-		);
-	}
-
-	/**
-	 * The partially-migrated case: someone customized a template after the
-	 * rename, so both terms hold real work. Neither side may be discarded.
-	 */
-	public function test_migration_4_merges_when_both_terms_hold_work(): void {
-		$old = $this->customize_template_under( 'shelter-pet-sync', 'single-vcps_pet' );
-		$new = $this->customize_template_under( \Petsync_Templates::THEME_NAMESPACE, 'archive-vcps_pet' );
-
-		petsync_migrate_4_template_namespace();
-
-		$this->assertSame( array( \Petsync_Templates::THEME_NAMESPACE ), $this->theme_terms_of( $old ) );
-		$this->assertSame( array( \Petsync_Templates::THEME_NAMESPACE ), $this->theme_terms_of( $new ) );
-		$this->assertNotNull( get_post( $old ), 'the older customization must survive the merge' );
-		$this->assertNotNull( get_post( $new ), 'the newer customization must survive the merge' );
-		$this->assertFalse( get_term_by( 'name', 'shelter-pet-sync', 'wp_theme' ) );
-	}
-
-	/**
-	 * An install can be upgrading across BOTH renames at once — it may have sat
-	 * on a version that predates them all.
-	 */
-	public function test_migration_4_consolidates_several_legacy_namespaces(): void {
-		$oldest = $this->customize_template_under( 'vcpahumane-pet-sync', 'single-vcps_pet' );
-		$older  = $this->customize_template_under( 'shelter-pet-sync', 'archive-vcps_pet' );
-
-		petsync_migrate_4_template_namespace();
-
-		$this->assertSame( array( \Petsync_Templates::THEME_NAMESPACE ), $this->theme_terms_of( $oldest ) );
-		$this->assertSame( array( \Petsync_Templates::THEME_NAMESPACE ), $this->theme_terms_of( $older ) );
-
-		foreach ( \Petsync_Templates::LEGACY_NAMESPACES as $legacy ) {
-			$this->assertFalse( get_term_by( 'name', $legacy, 'wp_theme' ), "$legacy should be gone" );
-		}
-	}
-
-	/**
-	 * A customization of a template the plugin no longer ships is exactly the
-	 * one a shelter would be upset to lose, so the migration moves a term's
-	 * whole contents rather than filtering to slugs it recognises.
-	 */
-	public function test_migration_4_carries_templates_the_plugin_no_longer_ships(): void {
-		$retired = $this->customize_template_under( 'shelter-pet-sync', 'some-retired-template' );
-
-		petsync_migrate_4_template_namespace();
-
-		$this->assertSame( array( \Petsync_Templates::THEME_NAMESPACE ), $this->theme_terms_of( $retired ) );
-	}
-
-	public function test_migration_4_is_idempotent(): void {
-		$customized = $this->customize_template_under( 'shelter-pet-sync' );
-
-		petsync_migrate_4_template_namespace();
-		petsync_migrate_4_template_namespace();
-
-		$this->assertSame( array( \Petsync_Templates::THEME_NAMESPACE ), $this->theme_terms_of( $customized ) );
-	}
-
-	public function test_migration_4_leaves_an_unrelated_theme_alone(): void {
-		$theme_template = $this->customize_template_under( 'twentytwentyfive' );
-
-		petsync_migrate_4_template_namespace();
-
-		$this->assertSame(
-			array( 'twentytwentyfive' ),
-			$this->theme_terms_of( $theme_template ),
-			'a real theme\'s own customizations are not ours to move'
-		);
-	}
-
-	/**
-	 * The migration exists because the lookup and the storage key drifted
-	 * apart. Pinning them to the same constant is the fix; this asserts they
-	 * cannot drift again.
-	 */
-	public function test_the_lookup_and_the_migration_agree_on_the_namespace(): void {
-		$customized = $this->customize_template_under( 'shelter-pet-sync' );
-
-		petsync_migrate_4_template_namespace();
-
-		$found = get_posts(
-			array(
-				'post_type'      => 'wp_template',
-				'post_status'    => 'publish',
-				'posts_per_page' => -1,
-				'fields'         => 'ids',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- deliberately mirrors the front-end lookup this test is pinning.
-				'tax_query'      => array(
-					array(
-						'taxonomy' => 'wp_theme',
-						'field'    => 'name',
-						'terms'    => \Petsync_Templates::THEME_NAMESPACE,
-					),
-				),
-			)
-		);
-
-		$this->assertContains(
-			$customized,
-			$found,
-			'after migrating, the template must be findable by the same query the front end uses'
-		);
-	}
-
-	/**
-	 * The realistic failure for the rename path: another wp_theme term already
-	 * holds the target slug under a different name, so the lookup by name finds
-	 * nothing but wp_update_term still rejects the slug.
-	 *
-	 * The slug is cosmetic — get_customized_template() matches on name — so the
-	 * migration retries with the name alone and lets WordPress derive a unique
-	 * slug. What must not happen is the rename failing silently and the install
-	 * being marked as migrated anyway.
-	 */
-	public function test_migration_4_survives_a_slug_collision(): void {
-		wp_insert_term(
-			'Some Other Theme',
-			'wp_theme',
-			array( 'slug' => \Petsync_Templates::THEME_NAMESPACE )
-		);
-
-		$customized = $this->customize_template_under( 'shelter-pet-sync' );
-
-		$this->assertTrue(
-			petsync_migrate_4_template_namespace(),
-			'a slug collision must not be reported as a failed migration'
-		);
-
-		$this->assertSame(
-			array( \Petsync_Templates::THEME_NAMESPACE ),
-			$this->theme_terms_of( $customized ),
-			'the customization must still end up under the current namespace'
-		);
-
-		$term = get_term_by( 'name', \Petsync_Templates::THEME_NAMESPACE, 'wp_theme' );
-		$this->assertInstanceOf( \WP_Term::class, $term );
-		$this->assertNotSame(
-			\Petsync_Templates::THEME_NAMESPACE,
-			$term->slug,
-			'WordPress should have derived a distinct slug, since the tidy one was taken'
-		);
+		update_option( 'petsync_db_version', 11, true );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$this->assertSame( '', get_echo( 'petsync_unsupported_upgrade_notice' ), 'not to someone who cannot install plugins' );
 	}
 
 	// ── The migration rail itself ────────────────────────────────────────────
+	//
+	// The shipped rail is empty, so these inject one. An injected rail brings
+	// its own starting point, which is why they can start below the floor.
 
 	/**
-	 * A migration that reports failure must not advance the stored version past
-	 * itself, or the failure becomes permanent as well as silent — the install
-	 * would be marked as migrated with the work never done.
+	 * The real rail, end to end, on a new install: the version lands on
+	 * PETSYNC_DB_VERSION.
 	 */
-	public function test_a_failing_migration_does_not_advance_the_version(): void {
-		delete_option( 'petsync_db_version' );
-
-		$ran = array();
-		$rail = array(
-			1 => function () use ( &$ran ) {
-				$ran[] = 1;
-				return true;
-			},
-			2 => function () use ( &$ran ) {
-				$ran[] = 2;
-				return false;
-			},
-			3 => function () use ( &$ran ) {
-				$ran[] = 3;
-				return true;
-			},
-		);
-
-		// Mirror petsync_maybe_upgrade()'s loop against a controllable rail.
-		$installed = 0;
-		$completed = $installed;
-		foreach ( $rail as $version => $callback ) {
-			if ( $version <= $installed ) {
-				continue;
-			}
-			if ( false === call_user_func( $callback ) ) {
-				break;
-			}
-			$completed = $version;
-		}
-
-		$this->assertSame( array( 1, 2 ), $ran, 'the rail must stop at the failure, not carry on' );
-		$this->assertSame( 1, $completed, 'only the migration that completed may be recorded' );
-	}
-
-	/**
-	 * The real rail, end to end: every declared migration completes on a fresh
-	 * install and the version lands on PETSYNC_DB_VERSION.
-	 */
-	public function test_the_rail_records_the_full_version_when_everything_succeeds(): void {
+	public function test_the_rail_records_the_full_version_on_a_new_install(): void {
 		delete_option( 'petsync_db_version' );
 
 		petsync_maybe_upgrade();
 
-		$this->assertSame(
-			PETSYNC_DB_VERSION,
-			(int) get_option( 'petsync_db_version' ),
-			'a clean run must record the full schema version'
-		);
-	}
-	// ── Migration 6: canonical field renames ─────────────────────────────────
-
-	public function test_migration_6_carries_hand_entered_meta_to_the_new_key(): void {
-		$id = $this->make_manual_pet();
-		update_post_meta( $id, $this->prefix . 'siblings_names', 'Pepper, Sage' );
-		update_post_meta( $id, $this->prefix . 'special_needs', 'yes' );
-
-		$this->assertTrue( petsync_migrate_6_field_renames() );
-
-		$this->assertSame( 'Pepper, Sage', get_post_meta( $id, $this->prefix . 'bonded_names', true ) );
-		$this->assertSame( 'yes', get_post_meta( $id, $this->prefix . 'has_special_needs', true ) );
-		$this->assertSame( '', get_post_meta( $id, $this->prefix . 'siblings_names', true ) );
-		$this->assertSame( '', get_post_meta( $id, $this->prefix . 'special_needs', true ) );
-	}
-
-	/**
-	 * special_needs_detail shares a prefix with special_needs and must not be
-	 * swept up — it is a different field with a different meaning.
-	 */
-	public function test_migration_6_leaves_special_needs_detail_alone(): void {
-		$id = $this->make_manual_pet();
-		update_post_meta( $id, $this->prefix . 'special_needs_detail', 'FeLV+' );
-
-		petsync_migrate_6_field_renames();
-
-		$this->assertSame( 'FeLV+', get_post_meta( $id, $this->prefix . 'special_needs_detail', true ) );
-	}
-
-	/**
-	 * Never clobber newer data with older. If someone has already entered a
-	 * value under the new key, the stale row is dropped rather than applied.
-	 */
-	public function test_migration_6_does_not_overwrite_an_existing_value(): void {
-		$id = $this->make_manual_pet();
-		update_post_meta( $id, $this->prefix . 'special_needs', 'no' );
-		update_post_meta( $id, $this->prefix . 'has_special_needs', 'yes' );
-
-		petsync_migrate_6_field_renames();
-
-		$this->assertSame( 'yes', get_post_meta( $id, $this->prefix . 'has_special_needs', true ) );
-		$this->assertSame( '', get_post_meta( $id, $this->prefix . 'special_needs', true ) );
-	}
-
-	public function test_migration_6_is_idempotent(): void {
-		$id = $this->make_manual_pet();
-		update_post_meta( $id, $this->prefix . 'siblings_names', 'Pepper' );
-
-		petsync_migrate_6_field_renames();
-		petsync_migrate_6_field_renames();
-
-		$this->assertSame( 'Pepper', get_post_meta( $id, $this->prefix . 'bonded_names', true ) );
-		$this->assertCount( 1, get_post_meta( $id, $this->prefix . 'bonded_names' ) );
-	}
-
-	// ─── The rail runner itself ─────────────────────────────────────────────
-
-	/**
-	 * The rail is the riskiest part of an upgrade and it used to fire on
-	 * whichever page load happened to be first — on a live site, a member of
-	 * the public's. `wp shelterkit-pets migrate` makes it deliberate, and both paths
-	 * share this one implementation so they cannot drift.
-	 */
-	public function test_a_dry_run_reports_every_pending_migration_and_writes_nothing(): void {
-		update_option( 'petsync_db_version', 0, true );
-
-		$result = petsync_run_migrations( true );
-
-		$this->assertSame( 0, $result['installed'] );
-		$this->assertSame( PETSYNC_DB_VERSION, $result['target'] );
-		$this->assertSame( array_keys( petsync_get_migrations() ), $result['ran'] );
-		$this->assertNull( $result['failed'] );
-
-		$this->assertSame(
-			0,
-			(int) get_option( 'petsync_db_version' ),
-			'a dry run that advances the recorded version is not a dry run'
-		);
-	}
-
-	public function test_a_real_run_advances_the_recorded_version(): void {
-		update_option( 'petsync_db_version', 0, true );
-
-		$result = petsync_run_migrations();
-
-		$this->assertSame( PETSYNC_DB_VERSION, $result['completed'] );
 		$this->assertSame( PETSYNC_DB_VERSION, (int) get_option( 'petsync_db_version' ) );
 	}
 
@@ -747,15 +259,65 @@ final class MigrationsTest extends PetTestCase {
 
 		$this->assertSame( array(), $result['ran'] );
 		$this->assertNull( $result['failed'] );
+		$this->assertFalse( $result['unsupported'] );
+	}
+
+	/**
+	 * The rail is the riskiest part of an upgrade and it used to fire on
+	 * whichever page load happened to be first — on a live site, a member of
+	 * the public's. `wp shelterkit-pets migrate --dry-run` shows what it would
+	 * do, and both paths share this one implementation so they cannot drift.
+	 */
+	public function test_a_dry_run_reports_every_pending_migration_and_writes_nothing(): void {
+		update_option( 'petsync_db_version', 0, true );
+
+		$called = false;
+		$result = petsync_run_migrations(
+			true,
+			null,
+			array(
+				1 => static function () use ( &$called ) {
+					$called = true;
+				},
+				2 => static function () use ( &$called ) {
+					$called = true;
+				},
+			)
+		);
+
+		$this->assertSame( array( 1, 2 ), $result['ran'] );
+		$this->assertSame( 2, $result['completed'] );
+		$this->assertNull( $result['failed'] );
+		$this->assertFalse( $called, 'a dry run that calls a migration is not a dry run' );
+		$this->assertSame(
+			0,
+			(int) get_option( 'petsync_db_version' ),
+			'a dry run that advances the recorded version is not a dry run'
+		);
+	}
+
+	public function test_a_real_run_advances_the_recorded_version(): void {
+		update_option( 'petsync_db_version', 0, true );
+
+		$result = petsync_run_migrations(
+			false,
+			null,
+			array(
+				1 => static fn() => null,
+				2 => static fn() => true,
+			)
+		);
+
+		$this->assertSame( array( 1, 2 ), $result['ran'] );
+		$this->assertSame( 2, $result['completed'] );
+		$this->assertSame( 2, (int) get_option( 'petsync_db_version' ) );
 	}
 
 	/**
 	 * The rule the whole rail exists for: a failure records the completed steps
 	 * and stops, so the failed one RETRIES rather than being skipped forever.
-	 *
-	 * Unreachable through the shipped migrations, which all succeed — so the
-	 * rail is injected. Before this design the version advanced unconditionally,
-	 * which made any migration failure both silent and permanent.
+	 * Before this design the version advanced unconditionally, which made any
+	 * migration failure both silent and permanent.
 	 */
 	public function test_a_failure_stops_the_rail_and_records_only_what_completed(): void {
 		update_option( 'petsync_db_version', 0, true );
@@ -794,9 +356,9 @@ final class MigrationsTest extends PetTestCase {
 	public function test_the_failed_migration_is_retried_and_the_completed_one_is_not(): void {
 		update_option( 'petsync_db_version', 0, true );
 
-		$ran     = array();
-		$fails   = true;
-		$rail    = static function () use ( &$ran, &$fails ): array {
+		$ran   = array();
+		$fails = true;
+		$rail  = static function () use ( &$ran, &$fails ): array {
 			return array(
 				1 => static function () use ( &$ran ) {
 					$ran[] = 1;
@@ -819,27 +381,6 @@ final class MigrationsTest extends PetTestCase {
 	}
 
 	/**
-	 * A dry run must not execute a migration, only name it.
-	 */
-	public function test_a_dry_run_does_not_call_the_migrations(): void {
-		update_option( 'petsync_db_version', 0, true );
-
-		$called = false;
-		$result = petsync_run_migrations(
-			true,
-			null,
-			array(
-				1 => static function () use ( &$called ) {
-					$called = true;
-				},
-			)
-		);
-
-		$this->assertFalse( $called, 'a dry run that calls the migration is not a dry run' );
-		$this->assertSame( array( 1 ), $result['ran'] );
-	}
-
-	/**
 	 * The reporter is what `wp shelterkit-pets migrate` prints. An upgrade that
 	 * reports nothing is the situation this command exists to end.
 	 */
@@ -855,16 +396,17 @@ final class MigrationsTest extends PetTestCase {
 				if ( 'done' === $event ) {
 					self::assertGreaterThanOrEqual( 0.0, $seconds );
 				}
-			}
+			},
+			array(
+				1 => static fn() => null,
+				2 => static fn() => null,
+			)
 		);
 
-		$expected = array_keys( petsync_get_migrations() );
-
-		$this->assertSame( $expected, array_values( array_unique( array_column( $events, 0 ) ) ) );
-		foreach ( $expected as $version ) {
-			$this->assertContains( array( $version, 'start' ), $events, "migration $version never reported starting" );
-			$this->assertContains( array( $version, 'done' ), $events, "migration $version never reported finishing" );
-		}
+		$this->assertSame(
+			array( array( 1, 'start' ), array( 1, 'done' ), array( 2, 'start' ), array( 2, 'done' ) ),
+			$events
+		);
 	}
 
 	/**
@@ -874,6 +416,12 @@ final class MigrationsTest extends PetTestCase {
 	 */
 	public function test_every_migration_has_an_operator_facing_description(): void {
 		$described = ( new \ReflectionClass( \Petsync\CLI\Migrate::class ) )->getConstant( 'DESCRIPTIONS' );
+
+		$this->assertSame(
+			array(),
+			array_diff( array_keys( (array) $described ), array_keys( petsync_get_migrations() ) ),
+			'a description left behind for a migration that no longer exists'
+		);
 
 		foreach ( array_keys( petsync_get_migrations() ) as $version ) {
 			$this->assertArrayHasKey(

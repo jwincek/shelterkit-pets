@@ -114,25 +114,4 @@ final class SyncAttributeTermsTest extends PetTestCase {
 		$this->assertContains( 'good-with-cats', $terms );
 		$this->assertNotContains( 'good-with-dogs', $terms, 'a pet known not to suit dogs must not be listed as good with them' );
 	}
-
-	/**
-	 * Existing sites carry pets synced while this was broken, and an
-	 * unchanged pet is never reprocessed. Migration 10 recomputes them.
-	 */
-	public function test_the_upgrade_gives_existing_synced_pets_their_terms(): void {
-		$pet = $this->make_synced_pet(
-			array(
-				'id'                    => 900101,
-				'name'                  => 'Synced While Broken',
-				'is_ok_with_other_dogs' => 'Yes',
-			)
-		);
-		wp_set_object_terms( $pet, array(), 'vcps_pet_attribute' );
-		update_option( 'petsync_db_version', 9 );
-
-		$result = petsync_run_migrations();
-
-		$this->assertContains( 10, $result['ran'] );
-		$this->assertContains( 'good-with-dogs', $this->terms( $pet ) );
-	}
 }

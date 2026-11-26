@@ -294,8 +294,8 @@ $archive_url = get_post_type_archive_link( 'vcps_pet' );
 		<div class="pet-slider__cards" style="--card-count: <?php echo esc_attr( $pet_count ); ?>">
 			<?php
 			foreach ( $pets as $index => $pet ) :
-				$slide_class      = 'pet-slider__slide pet-slider__slide--card';
-				$slide_directives = '';
+				$slide_class         = 'pet-slider__slide pet-slider__slide--card';
+				$slide_tracks_active = false;
 				include __DIR__ . '/partials/card.php';
 			endforeach;
 			?>
@@ -363,12 +363,12 @@ $archive_url = get_post_type_archive_link( 'vcps_pet' );
 									aria-label="<?php esc_attr_e( 'Add to favorites', 'shelterkit-pets' ); ?>"
 								>
 									<?php
-									echo Petsync_Icons::get_heart_interactive( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG.
+									Petsync_Icons::render_heart(
 										array(
 											'width'  => 24,
 											'height' => 24,
 										)
-									); /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG. */
+									);
 									?>
 								</button>
 								<button
@@ -544,8 +544,8 @@ $archive_url = get_post_type_archive_link( 'vcps_pet' );
 			<div class="pet-slider__track">
 				<?php
 				foreach ( $pets as $index => $pet ) :
-					$slide_class      = 'pet-slider__slide';
-					$slide_directives = 'data-wp-class--is-active="state.isActiveSlide"';
+					$slide_class         = 'pet-slider__slide';
+					$slide_tracks_active = true;
 					include __DIR__ . '/partials/card.php';
 				endforeach;
 				?>

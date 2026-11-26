@@ -15,7 +15,7 @@
  *   $show_badges       (bool)   Whether to render special needs / bonded pair badges.
  *   $badge_position    (string) 'image-top' | 'overlay-bottom' | 'above-name'.
  *   $slide_class        (string) CSS classes for the <article> wrapper.
- *   $slide_directives   (string) Extra data-wp-* attributes for the <article>.
+ *   $slide_tracks_active (bool)  Whether the <article> takes the slider's is-active class.
  *
  * @package ShelterKit_Pets
  * @since 1.0.0
@@ -61,7 +61,9 @@ $badge_pos = $badge_position ?? 'image-top';
 <article
 	class="<?php echo esc_attr( $slide_class ); ?>"
 	<?php echo wp_interactivity_data_wp_context( $pet_context ); /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_interactivity_data_wp_context() returns an escaped attribute. */ ?>
-	<?php echo $slide_directives ?? ''; /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static Interactivity directive string. */ ?>
+	<?php if ( ! empty( $slide_tracks_active ) ) : ?>
+		data-wp-class--is-active="state.isActiveSlide"
+	<?php endif; ?>
 >
 	<a href="<?php echo esc_url( $pet['url'] ); ?>" class="pet-slider__card">
 		<div class="pet-slider__image-wrapper">
@@ -180,12 +182,12 @@ $badge_pos = $badge_position ?? 'image-top';
 				aria-label="<?php esc_attr_e( 'Add to favorites', 'shelterkit-pets' ); ?>"
 			>
 				<?php
-				echo Petsync_Icons::get_heart_interactive( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG.
+				Petsync_Icons::render_heart(
 					array(
 						'width'  => 18,
 						'height' => 18,
 					)
-				); /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static, plugin-controlled SVG. */
+				);
 				?>
 			</button>
 			<button

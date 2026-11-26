@@ -427,7 +427,7 @@ class Petsync_Blocks {
 		}
 
 		// Check if viewing a comparison URL.
-		if ( isset( $_GET['compare'] ) ) {
+		if ( Petsync_Helpers::has_query_param( 'compare' ) ) {
 			return true;
 		}
 

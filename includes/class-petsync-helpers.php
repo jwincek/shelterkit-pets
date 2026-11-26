@@ -28,6 +28,51 @@ class Petsync_Helpers {
 		'coat'   => 'vcps_pet_coat',
 	);
 
+	// === Query string ===
+
+	/**
+	 * A parameter from the current page's query string, sanitized, or '' when
+	 * it is absent or not a single value.
+	 *
+	 * Every read of the query string on the front end goes through here. They
+	 * are all public, read-only display parameters: the pet archive's filters,
+	 * search, sort and page number, and the pets being compared. Each one
+	 * chooses what a page shows and none changes stored data, so there is no
+	 * action for a nonce to protect. They are also links visitors bookmark and
+	 * share, and pages a page cache serves to everyone, where a nonce would
+	 * expire and break the link.
+	 *
+	 * The caller still validates the value for its purpose: an ID is looked
+	 * up, a filter is matched against known terms, and nothing read here is
+	 * printed back unescaped.
+	 *
+	 * @since 3.0.0
+	 *
+	 * @param string $key Parameter name.
+	 */
+	public static function query_param( string $key ): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a public, read-only display parameter; see above.
+		if ( ! isset( $_GET[ $key ] ) || ! is_string( $_GET[ $key ] ) ) {
+			return '';
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a public, read-only display parameter; see above.
+		return sanitize_text_field( wp_unslash( $_GET[ $key ] ) );
+	}
+
+	/**
+	 * Whether the current page's query string has this parameter at all, even
+	 * empty. See query_param().
+	 *
+	 * @since 3.0.0
+	 *
+	 * @param string $key Parameter name.
+	 */
+	public static function has_query_param( string $key ): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a public, read-only display parameter; see query_param().
+		return isset( $_GET[ $key ] );
+	}
+
 	/** Registered meta fields (only essential sync keys). */
 	public const META_FIELDS = array(
 		'ps_id',
@@ -111,10 +156,7 @@ class Petsync_Helpers {
 	 * @since 1.2.0
 	 */
 	public static function comparison_is_from_url(): bool {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading a public, read-only display parameter, exactly as get_comparison() does.
-		$raw = isset( $_GET['compare'] ) ? sanitize_text_field( wp_unslash( $_GET['compare'] ) ) : '';
-
-		return '' !== trim( $raw );
+		return '' !== trim( self::query_param( 'compare' ) );
 	}
 
 	public static function get_favorites(): array {
@@ -149,8 +191,8 @@ class Petsync_Helpers {
 
 	public static function get_comparison(): array {
 		// Priority: URL > User Meta > Cookie.
-		if ( isset( $_GET['compare'] ) ) {
-			$ids = array_map( 'absint', explode( ',', sanitize_text_field( wp_unslash( $_GET['compare'] ) ) ) );
+		if ( self::has_query_param( 'compare' ) ) {
+			$ids = array_map( 'absint', explode( ',', self::query_param( 'compare' ) ) );
 			return self::validate_pet_ids( $ids );
 		}
 

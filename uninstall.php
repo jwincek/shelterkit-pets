@@ -14,8 +14,7 @@
  * loses nothing):
  *  - all `vcps_pet` posts, however they were added (and their post meta /
  *    term relationships)
- *  - all terms in the plugin's `vcps_pet_*` taxonomies, and in the `pet_*`
- *    names they had before migration 9 where that never ran
+ *  - all terms in the plugin's `vcps_pet_*` taxonomies
  *  - Site Editor customizations of plugin templates and template parts
  *    (wp_template / wp_template_part posts filed under this plugin's
  *    wp_theme term), plus that term itself
@@ -46,7 +45,6 @@ function petsync_uninstall_site(): bool {
 
 	// --- Ephemeral tier: always removed --------------------------------
 	wp_clear_scheduled_hook( 'petsync_scheduled_sync' );
-	wp_clear_scheduled_hook( 'petstablished_scheduled_sync' ); // legacy pre-1.0 hook name
 	wp_clear_scheduled_hook( 'petsync_import_photos' ); // photos an import has yet to download
 
 	// Every transient the plugin sets, by name. The SQL sweep below cannot see
@@ -65,13 +63,6 @@ function petsync_uninstall_site(): bool {
 			"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
 			$wpdb->esc_like( '_transient_petsync_' ) . '%',
 			$wpdb->esc_like( '_transient_timeout_petsync_' ) . '%'
-		)
-	);
-	$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->prepare(
-			"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-			$wpdb->esc_like( '_transient_petstablished_' ) . '%',
-			$wpdb->esc_like( '_transient_timeout_petstablished_' ) . '%'
 		)
 	);
 
@@ -107,18 +98,9 @@ function petsync_uninstall_site(): bool {
 
 	// Taxonomy terms. The plugin isn't loaded during uninstall, so its
 	// taxonomies are unregistered and get_terms()/wp_delete_term() would
-	// refuse them. Stub-register each one just for this request.
-	//
-	// The current names, then the names before migration 9. An install deleted
-	// before migration 9 ever ran still has its terms under the old ones. The
-	// list repeats petsync_taxonomy_renames(), which is unreachable here;
-	// validator check 16 keeps the two in step.
-	//
-	// Anywhere else an old name is not ours: on a site that ran migration 9,
-	// or started after it, a pet_* taxonomy belongs to whichever plugin
-	// registers it, active or not, and its terms stay. The same goes for an
-	// old name that an active plugin registers now.
-	$migrated   = (int) get_option( 'petsync_db_version', 0 ) >= 9;
+	// refuse them. Stub-register each one just for this request. The list
+	// repeats config/taxonomies.json, which is unreachable here; validator
+	// check 16 keeps the two in step.
 	$taxonomies = array(
 		'vcps_pet_status',
 		'vcps_pet_animal',
@@ -129,22 +111,9 @@ function petsync_uninstall_site(): bool {
 		'vcps_pet_color',
 		'vcps_pet_coat',
 		'vcps_pet_attribute',
-		'pet_status',
-		'pet_animal',
-		'pet_breed',
-		'pet_age',
-		'pet_sex',
-		'pet_size',
-		'pet_color',
-		'pet_coat',
-		'pet_attribute',
 	);
 
 	foreach ( $taxonomies as $taxonomy ) {
-		if ( ! str_starts_with( $taxonomy, 'vcps_' ) && ( $migrated || taxonomy_exists( $taxonomy ) ) ) {
-			continue;
-		}
-
 		register_taxonomy( $taxonomy, 'vcps_pet' );
 
 		$term_ids = get_terms(
@@ -165,7 +134,8 @@ function petsync_uninstall_site(): bool {
 
 		// Core writes these, and nothing else removes them: the default term of a
 		// taxonomy that declares one, as the status taxonomy does, and the
-		// hierarchy cache of one that was ever hierarchical, as pet_breed once was.
+		// hierarchy cache of one that was ever hierarchical, as the breed
+		// taxonomy once was.
 		delete_option( 'default_term_' . $taxonomy );
 		delete_option( $taxonomy . '_children' );
 	}
@@ -173,16 +143,9 @@ function petsync_uninstall_site(): bool {
 	// Site Editor customizations of plugin templates, saved under this
 	// plugin's wp_theme term (see
 	// Petsync_Templates::get_customized_template()); inert without
-	// the plugin.
-	//
-	// Every name this plugin has filed templates under, not just the current
-	// one — migration 4 normally consolidates them, but it only runs while the
-	// plugin is active, so an install deleted before it ever loaded an admin
-	// page still has customizations under a legacy term. Same reasoning as the
-	// legacy option names below. The list is duplicated from
-	// Petsync_Templates::LEGACY_NAMESPACES because the plugin is not loaded
-	// during uninstall and the constant is unreachable here.
-	$theme_names = array( 'shelterkit-pets', 'shelter-pets', 'shelter-pet-sync', 'vcpahumane-pet-sync', 'petstablished-sync' );
+	// the plugin. The name repeats Petsync_Templates::THEME_NAMESPACE, which
+	// is unreachable here; validator check 10 keeps the two in step.
+	$theme_names = array( 'shelterkit-pets' );
 
 	$template_ids = get_posts(
 		array(
@@ -234,11 +197,6 @@ function petsync_uninstall_site(): bool {
 	//
 	// A shelter removing every ShelterKit plugin leaves one option row behind.
 	// That is the right trade.
-	// Legacy pre-1.0 option names, in case the rename migration never ran.
-	delete_option( 'petstablished_sync_settings' );
-	delete_option( 'petstablished_last_sync' );
-	delete_option( 'petstablished_last_sync_stats' );
-	delete_option( 'petstablished_sync_log' );
 
 	return true;
 }

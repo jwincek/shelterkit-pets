@@ -128,6 +128,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	// The breadcrumb link now uses a Block Binding on the core/paragraph
 	// 'url' attribute (source: petsync/pet-data, key: archive_url)
 	// instead of the previous href="#pet-archive" str_replace approach.
-	echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- rendered InnerBlocks content (escaped by WP).
+	//
+	// $content is that output, rendered by WordPress and passed in, each block
+	// having escaped its own. Escaping it again as HTML would strip the markup
+	// those blocks rely on, such as their Interactivity directives.
+	echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- the rendered inner blocks; see above.
 	?>
 </article>

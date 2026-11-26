@@ -43,5 +43,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <section <?php echo $wrapper_attributes; /* phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes() returns escaped HTML. */ ?>>
-	<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- InnerBlocks rendered output. ?>
+	<?php
+	// $content is the inner blocks' output, which WordPress rendered and passed
+	// in, each block having escaped its own. Escaping it again as HTML would
+	// strip the markup those blocks rely on, such as their Interactivity
+	// directives, as it would for any block's inner content.
+	echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- the rendered inner blocks; see above.
+	?>
 </section>

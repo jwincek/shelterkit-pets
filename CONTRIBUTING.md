@@ -82,7 +82,10 @@ runtime:
     every editor control is read by something.
 14. Post-type comparisons in editor scripts name a real post type.
 15. No Interactivity directive sits on or inside an `<svg>`.
-16. `uninstall.php` deletes every taxonomy name, current and pre-migration-9.
+16. `uninstall.php` deletes every taxonomy `taxonomies.json` declares.
+17. A second `watch`, `init` or `run` directive on an element uses a
+    three-hyphen unique ID (`data-wp-watch---name`), which WordPress 7.2
+    requires.
 
 ### Plugin Check
 
@@ -162,15 +165,22 @@ that hands pet data to the public must go through an ability.
 ### Stored data changes through the migration rail
 
 To change the shape of stored data, bump `PETSYNC_DB_VERSION` and add an
-entry to `petsync_get_migrations()`. A migration must be idempotent, because
-an upgrade from a build older than the rail runs the whole list. A new install
-runs none of it: `petsync_is_new_install()` records the current version
-instead, because old migrations work on names, such as the `pet_*` taxonomies,
-that another plugin may own on a new site. So a migration must never be the
-only place something a new install needs gets created. It may return `false` to
-stop the rail, so the step runs again rather than being silently marked done.
-Never reuse a version number: an install already at that version will not run
-it again. `wp shelterkit-pets migrate --dry-run` shows what would run.
+entry to `petsync_get_migrations()`, with a line for it in the `migrate`
+command's `DESCRIPTIONS`. The list is empty since 3.0.0, which removed
+migrations 1 to 12 once every known site had passed them; the next one is 13.
+A migration must be idempotent. A new install runs none of them:
+`petsync_is_new_install()` records the current version instead. So a migration
+must never be the only place something a new install needs gets created. It
+may return `false` to stop the rail, so the step runs again rather than being
+silently marked done. Never reuse a version number: an install already at that
+version will not run it again. `wp shelterkit-pets migrate --dry-run` shows
+what would run.
+
+The rail refuses data older than `PETSYNC_DB_VERSION_MIN` (12, what 2.2.0
+leaves) and shows administrators a notice to install 2.2.0 first, because a
+later migration run on it would record a version whose earlier steps never
+ran. Removing migrations means raising that floor, and only once no site can
+still be below it.
 
 ### A taxonomy page is the archive with a filter
 
@@ -251,15 +261,14 @@ breaks existing installs, and once the plugin is listed there is no install
 that can be reached to fix it up.
 
 - The post type `vcps_pet`, the nine `vcps_pet_*` taxonomies, and every
-  `_pet_*` post and user meta key. The taxonomies were `pet_*` until
-  migration 9, and keep those old names in two public places: as URL slugs,
+  `_pet_*` post and user meta key. The taxonomies were `pet_*` before 2.0,
+  and keep those old names in two public places: as URL slugs,
   so the `/pet_breed/beagle/` a search engine indexed still resolves, and as
   REST bases, so `/wp/v2/pet_breed` and `/wp/v2/vcps_pet?pet_breed=` keep
   working for clients on other sites.
 - The options `petsync_settings`, `petsync_last_sync`,
   `petsync_last_sync_stats`, `petsync_sync_log`, `petsync_db_version` and
-  `petsync_preview_pet_id`; the shared `shelterkit_organization`; and the
-  legacy `petstablished_*` names the first migration still reads
+  `petsync_preview_pet_id`, and the shared `shelterkit_organization`
 - The cron hook `petsync_scheduled_sync`
 - **The 21 `petsync/*` block names, their attribute names and enum values**
   (including the adoption action's `formMode` value `petstablished`), and the

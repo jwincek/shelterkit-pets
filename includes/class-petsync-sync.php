@@ -1091,9 +1091,9 @@ class Petsync_Sync {
 	 * failing, so "last sync" stays recent while the data rots.
 	 *
 	 * Pets with no _pet_last_seen at all are ignored rather than counted stale.
-	 * They predate this field, and migration 8 backfills them — treating an
-	 * absent timestamp as infinitely old would flag an entire catalogue on the
-	 * first page load after an upgrade.
+	 * They predate this field (a 1.x upgrade backfilled it), and treating an
+	 * absent timestamp as infinitely old would flag an entire catalogue at
+	 * once.
 	 *
 	 * @param int $days Age in days beyond which a pet counts as stale.
 	 * @return int[] Post IDs.

@@ -359,10 +359,10 @@ class Petsync_Kennel_Cards {
 	 * The printable sheet.
 	 */
 	private function render_print_sheet(): void {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only screen; no state is changed.
 		// intval rather than absint: absint takes the absolute value, so ?pets[]=-5
 		// would silently resolve to pet 5 — a real, unrelated animal — instead of
 		// being rejected. Same reasoning as the gallery ability's ID handling.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only screen; no state is changed.
 		$ids = isset( $_GET['pets'] ) ? array_map( 'intval', (array) wp_unslash( $_GET['pets'] ) ) : array();
 		$ids = array_values( array_filter( $ids, static fn( int $id ): bool => $id > 0 ) );
 
@@ -429,7 +429,9 @@ class Petsync_Kennel_Cards {
 						<?php
 						foreach ( $sheet as $id ) {
 							echo '<div class="petsync-cards__cell">';
-							echo $this->render_card( $id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- rendered blocks, escaped by the block renderer.
+							// The card template's blocks, rendered by do_blocks(), each
+							// escaping its own output, as a page's content is.
+							echo $this->render_card( $id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- rendered blocks; see above.
 							echo '</div>';
 						}
 						?>

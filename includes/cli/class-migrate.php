@@ -30,22 +30,11 @@ class Migrate {
 	 * Keyed by version. A migration with no entry still runs; it just gets no
 	 * description, which is a prompt to add one rather than a failure.
 	 *
+	 * Empty since 3.0.0, which removed migrations 1 to 12 from the rail.
+	 *
 	 * @var array<int, string>
 	 */
-	private const DESCRIPTIONS = array(
-		1  => 'Rename legacy petstablished_* options and cron hooks to petsync_*',
-		2  => 'Stamp _pet_provider on pets synced before the plugin recorded it',
-		3  => 'Give hand-created pets a status so they reach the archive',
-		4  => 'Consolidate wp_theme template namespaces onto the current one',
-		5  => 'The same again, for the shelterkit-pets rename',
-		6  => 'Apply entity field renames to stored post meta',
-		7  => 'Backfill vcps_pet_attribute terms for every pet (touches all pets)',
-		8  => 'Seed _pet_last_seen so staleness has a baseline (touches all pets)',
-		9  => 'Give the pet taxonomies the vcps_ prefix (keeps their URLs)',
-		10 => 'Backfill vcps_pet_attribute terms again: syncs had skipped them (touches all pets)',
-		11 => 'Keep syncing only cats and dogs where a sync already ran (settings only)',
-		12 => 'Record which pets the site has published, for check-adoptions (touches published pets)',
-	);
+	private const DESCRIPTIONS = array();
 
 	/**
 	 * Run pending database migrations.
@@ -92,10 +81,14 @@ class Migrate {
 			return;
 		}
 
-		if ( 0 === $installed ) {
-			\WP_CLI::warning(
-				'No schema version recorded, but this site has data from an older build that predates '
-				. 'the migration rail, so every migration below will run.'
+		if ( petsync_upgrade_unsupported() ) {
+			\WP_CLI::error(
+				sprintf(
+					'This site\'s pet data was saved by a version older than 2.2.0 (schema %d), which this version '
+					. 'can no longer convert. Install ShelterKit Pets 2.2.0, run `wp shelterkit-pets migrate`, '
+					. 'then install this version again.',
+					$installed
+				)
 			);
 		}
 

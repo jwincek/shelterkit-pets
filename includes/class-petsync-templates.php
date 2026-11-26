@@ -26,39 +26,13 @@ class Petsync_Templates {
 	 * found, silently, and the front end quietly falls back to the bundled
 	 * file.
 	 *
-	 * That has already happened twice (see LEGACY_NAMESPACES), because the name
-	 * was written out in three separate places and only some of them were
-	 * updated. It lives here now so a rename is one edit, and so the migration
-	 * that repairs the damage can agree with the lookup by construction.
+	 * That happened twice before 2.0, because the name was written out in
+	 * three separate places and only some of them were updated. It lives here
+	 * now so a rename is one edit. Renaming it also needs a migration that
+	 * re-files existing customizations under the new name, as migrations 4 and
+	 * 5 did until 3.0.0 removed them.
 	 */
 	public const THEME_NAMESPACE = 'shelterkit-pets';
-
-	/**
-	 * Namespaces this plugin has previously filed templates under.
-	 *
-	 * Oldest first, because that is the order migration 4 consolidates them in.
-	 *
-	 * `petstablished-sync` predates the others and was NOT recoverable from the
-	 * history of this file — the class never carried that literal. It was found
-	 * by listing the wp_theme terms on a real install, where it still held two
-	 * customizations (`single-pet`, `archive-pet`, slugs that predate the
-	 * pet -> vcps_pet CPT rename). Git history is not a sufficient source for
-	 * this list; the database is.
-	 *
-	 * The rest: `vcpahumane-pet-sync` up to 2026-07-04, `shelter-pet-sync` from
-	 * 2026-07-05, `shelter-pets` from 2026-08-01, and the current name from
-	 * 2026-08-09. Migrations 4 and 5 re-file anything found under these.
-	 *
-	 * Add the outgoing name here on any future rename — an install can upgrade
-	 * across several renames at once, so this list is cumulative and nothing
-	 * should ever be removed from it.
-	 */
-	public const LEGACY_NAMESPACES = array(
-		'petstablished-sync',
-		'vcpahumane-pet-sync',
-		'shelter-pet-sync',
-		'shelter-pets',
-	);
 
 	public function __construct() {
 		add_filter( 'get_block_templates', array( $this, 'add_templates' ), 10, 3 );

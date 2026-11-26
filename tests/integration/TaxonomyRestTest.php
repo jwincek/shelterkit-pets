@@ -19,10 +19,25 @@ use WP_REST_Request;
 
 final class TaxonomyRestTest extends PetTestCase {
 
+	/**
+	 * Each taxonomy's name before 2.0, which it keeps as its REST base.
+	 */
+	private const OLD_NAMES = array(
+		'pet_status'    => 'vcps_pet_status',
+		'pet_animal'    => 'vcps_pet_animal',
+		'pet_breed'     => 'vcps_pet_breed',
+		'pet_age'       => 'vcps_pet_age',
+		'pet_sex'       => 'vcps_pet_sex',
+		'pet_size'      => 'vcps_pet_size',
+		'pet_color'     => 'vcps_pet_color',
+		'pet_coat'      => 'vcps_pet_coat',
+		'pet_attribute' => 'vcps_pet_attribute',
+	);
+
 	public function test_every_taxonomy_is_served_under_its_old_name(): void {
 		$routes = rest_get_server()->get_routes();
 
-		foreach ( petsync_taxonomy_renames() as $old => $new ) {
+		foreach ( self::OLD_NAMES as $old => $new ) {
 			$this->assertSame( $old, get_taxonomy( $new )->rest_base );
 			$this->assertArrayHasKey( '/wp/v2/' . $old, $routes, "/wp/v2/$old must still answer" );
 		}

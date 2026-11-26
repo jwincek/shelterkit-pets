@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Don't show compare bar when viewing the comparison page itself.
-if ( isset( $_GET['compare'] ) && ! empty( $_GET['compare'] ) ) {
+if ( ! empty( Petsync_Helpers::query_param( 'compare' ) ) ) {
 	return;
 }
 
@@ -57,6 +57,8 @@ if ( $comparison ) {
 
 $context = array(
 	'archiveUrl' => $archive_url,
+	// On a pet's own page, the comparison page links back to this pet.
+	'fromPetId'  => is_singular( 'vcps_pet' ) ? get_queried_object_id() : 0,
 );
 
 // Merge compared pet data into the global interactivity state so that

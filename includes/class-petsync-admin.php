@@ -112,8 +112,8 @@ class Petsync_Admin {
 			// Statuses whose synced pets are published. See Pet_Visibility.
 			'public_statuses'          => \Petsync\Core\Pet_Visibility::DEFAULT_PUBLIC_STATUSES,
 			// Species the sync asks Petstablished for. Empty is every species.
-			// Sites that synced before this setting existed keep cats and dogs,
-			// which is what the sync used to ask for; see migration 11.
+			// Sites that synced before this setting existed (before 2.0) were
+			// given cats and dogs, which is what the sync used to ask for.
 			'sync_species'             => array(),
 		);
 	}
@@ -638,10 +638,14 @@ class Petsync_Admin {
 	}
 
 	public function display_notices(): void {
+		// The result of a sync, passed back by the redirect after it. It only
+		// picks which of three fixed messages to show, and changes nothing.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only, see above.
 		if ( ! isset( $_GET['petsync_sync'] ) ) {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only, see above.
 		$status  = sanitize_text_field( wp_unslash( $_GET['petsync_sync'] ) );
 		$message = '';
 		$type    = 'success';

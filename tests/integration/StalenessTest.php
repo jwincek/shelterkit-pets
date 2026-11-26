@@ -116,17 +116,4 @@ final class StalenessTest extends PetTestCase {
 
 		$this->assertNotContains( $old, Petsync_Sync::get_stale_pets( 7 ) );
 	}
-
-	public function test_migration_8_seeds_only_untimed_provider_pets(): void {
-		$untimed = $this->make_pet_seen( null );
-		$timed   = $this->make_pet_seen( 30 );
-		$manual  = $this->make_pet_seen( null, false );
-		$before  = get_post_meta( $timed, '_pet_last_seen', true );
-
-		petsync_migrate_8_seed_last_seen();
-
-		$this->assertNotSame( '', get_post_meta( $untimed, '_pet_last_seen', true ), 'an untimed provider pet must be seeded' );
-		$this->assertSame( $before, get_post_meta( $timed, '_pet_last_seen', true ), 'an existing timestamp must not be overwritten' );
-		$this->assertSame( '', get_post_meta( $manual, '_pet_last_seen', true ), 'a manual pet must not be seeded' );
-	}
 }
