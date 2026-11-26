@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-25
+
 ### Removed
 - **Upgrading from a version before 2.2.0.** The twelve migrations that
   brought older sites' data up to date are gone, as are the pre-1.0 scripts in
@@ -27,11 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now carries a pet's ID, and the link goes to that pet's own page, only if
   it is published. Older links with a URL there show the page without it.
   Found by the WordPress.org plugin review.
-- **On WordPress 7.2, the favorites window would not update.** Its two
+- **On WordPress 7.2, the favorites window opened empty.** Its two
   `data-wp-watch` directives used the two-hyphen form of a unique ID, which
-  WordPress 6.9 deprecated and 7.2 ignores, so the window would keep showing
-  what the page loaded with. They use three hyphens now, and validator check
-  17 rejects the old form.
+  WordPress 6.9 deprecated and 7.2 ignores, so the saved pets were never drawn
+  into it: it showed their count and nothing else. They use three hyphens
+  now, and validator check 17 rejects the old form. A site on 2.2.0 loses the
+  window as soon as it updates to WordPress 7.2.
 - **Icons, the adoption button and the tagline are escaped where they are
   printed,** rather than built safely in one place and printed in another,
   as the WordPress.org review asked. Icons are escaped against an SVG
@@ -666,7 +669,8 @@ record is affected.
 - Built on the WordPress Abilities API and Block Bindings; server-rendered blocks with no build step.
 - Uninstall handler with an opt-in "Delete all data when this plugin is deleted" setting (default off, so delete + reinstall loses nothing). Ephemeral state (cron event, transients) is always cleaned up; pets, `pet_*` taxonomy terms, Site Editor template customizations, options, and per-user favorites/comparison meta are removed only when opted in (multisite-aware).
 
-[Unreleased]: https://github.com/jwincek/shelterkit-pets/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/jwincek/shelterkit-pets/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/jwincek/shelterkit-pets/compare/v2.2.0...v3.0.0
 [2.2.0]: https://github.com/jwincek/shelterkit-pets/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/jwincek/shelterkit-pets/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/jwincek/shelterkit-pets/compare/v1.6.0...v2.0.0
